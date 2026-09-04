@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oficina Virtual — Inmobiliarias y Constructoras | Ciencuadras</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cc: {
+              navy:   '#00204D',
+              navy2:  '#004A82',
+              primary:'#097AB2',
+              p700:   '#004A80',
+              blue:   '#3E98CC',
+              green:  '#53A532',
+              green700:'#277619',
+              amber:  '#FF9D21',
+              amber2: '#FFA533',
+              red:    '#DC0A0A',
+              bg:     '#F0F3F4',
+              border: '#DFE4E7',
+              text:   '#293038'
+            }
+          },
+          fontFamily: { sans: ['Ciencuadras', 'Montserrat', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Ciencuadras', 'Montserrat', sans-serif; }
+    .card { transition: transform .2s, box-shadow .2s; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.08); }
+    .nav-link.active { background: rgba(62,152,204,.18); color: #fff; border-left: 3px solid #FF9D21; }
+    .nav-link { border-left: 3px solid transparent; }
+    .view { display: none; }
+    .view.active { display: block; animation: fade .25s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .score-ring { transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1); }
+    input[type=range].cc-range { -webkit-appearance:none; height:6px; border-radius:9999px; background:#ced4da; outline:none; }
+    input[type=range].cc-range::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#00204D; border:3px solid #FF9D21; cursor:pointer; }
+    input[type=range].cc-range::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#00204D; border:3px solid #FF9D21; cursor:pointer; }
+    .toast { animation: toastIn .3s ease; }
+    @keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+  </style>
+</head>
+<body class="bg-cc-bg text-cc-text min-h-screen">
+  <div class="flex min-h-screen">
+    <aside id="sidebar" class="bg-gradient-to-b from-cc-navy to-cc-navy2 text-white w-64 flex-shrink-0 flex flex-col fixed md:static inset-y-0 left-0 z-40 -translate-x-full md:translate-x-0 transition-transform">
+      <div class="px-5 py-5 border-b border-white/10">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-cc-amber flex items-center justify-center font-extrabold text-cc-navy text-lg">C</div>
+          <div>
+            <p class="font-bold leading-tight">Ciencuadras</p>
+            <p class="text-[11px] text-cc-blue">Oficina Virtual</p>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 py-4 space-y-1">
+        <button data-view="optimizador" class="nav-link active w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-blue hover:bg-white/5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          <span>Optimizador de Anuncio IA</span>
+        </button>
+        <button data-view="leads" class="nav-link w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-blue hover:bg-white/5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"/></svg>
+          <span>Lead 360° & Next Best Action</span>
+        </button>
+        <button data-view="acelerador" class="nav-link w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-blue hover:bg-white/5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>Acelerador Grupo Bolívar</span>
+        </button>
+      </nav>
+      <div class="px-5 py-4 border-t border-white/10 text-[11px] text-cc-blue">
+        <p class="font-semibold text-white">Estrategia competitiva</p>
+        <p class="mt-1 leading-relaxed">Respuesta rápida vs. Fincaraíz y Metrocuadrado.</p>
+      </div>
+    </aside>
+    <div id="backdrop" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+    <div class="flex-1 flex flex-col min-w-0">
+      <header class="bg-white border-b border-cc-border sticky top-0 z-20">
+        <div class="px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <button id="menuBtn" class="md:hidden text-cc-navy p-1" aria-label="Abrir menú">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div class="min-w-0">
+              <h1 id="viewTitle" class="text-lg md:text-xl font-bold text-cc-navy truncate">Optimizador de Anuncio IA</h1>
+              <p id="viewSubtitle" class="text-xs text-cc-text hidden sm:block truncate">Sube la calidad de tu anuncio con IA y gana más visibilidad</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="hidden sm:inline text-xs text-gray-400">Prototipo · Datos simulados</span>
+            <div class="w-9 h-9 rounded-full bg-cc-navy text-white flex items-center justify-center text-sm font-semibold">AM</div>
+          </div>
+        </div>
+      </header>
+      <main class="flex-1 px-4 md:px-8 py-6 max-w-6xl w-full mx-auto">
+        <section id="view-optimizador" class="view active"></section>
+        <section id="view-leads" class="view"></section>
+        <section id="view-acelerador" class="view"></section>
+      </main>
+      <footer class="bg-white border-t border-cc-border">
+        <div class="px-4 md:px-8 py-3 text-xs text-cc-text flex items-center justify-between">
+          <span>Oficina Virtual Inmobiliarias &amp; Constructoras — Ciencuadras</span>
+          <span class="text-gray-400">Grupo Bolívar</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+  <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+  <script src="app-oficina-virtual.js"></script>
+</body>
+</html>
