@@ -1,9 +1,16 @@
 /* =====================================================================
-   Oficina Virtual Ciencuadras — Prototipo interactivo (SPA vanilla JS)
+   Zona Privada Ciencuadras — Prototipo interactivo (SPA vanilla JS)
+   Secciones (menu "Mi zona privada"):
+     - publicaciones : Inmuebles publicados (plan + tabs + private-card)
+     - contactos     : Contactos recibidos (tabla de leads con descarga)
+     - reportes      : Mis Reportes (estadisticas de leads)
+     - oficina-ia    : Oficina Virtual IA  -> 3 modulos con sub-tabs
+     - productos     : Productos y Servicios (planes)
+     - perfil        : Mis Datos
+   Datos simulados (mock) — mercado colombiano (COP, Bogota/Medellin).
    ===================================================================== */
 (function () {
   'use strict';
-
   const COP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
   const fmtCOP = (n) => COP.format(Math.round(n));
   const fmtNum = (n) => new Intl.NumberFormat('es-CO').format(Math.round(n));
@@ -12,23 +19,22 @@
 
   function toast(msg, type = 'info') {
     const host = el('toastHost');
-    const colors = { info: 'bg-cc-navy', success: 'bg-green-600', warning: 'bg-cc-amber text-cc-navy', error: 'bg-cc-red' };
+    const colors = { info: 'bg-cc-navy', success: 'bg-cc-green700', warning: 'bg-cc-amber text-cc-navy', error: 'bg-cc-red' };
     const t = document.createElement('div');
-    t.className = `toast ${colors[type] || colors.info} text-white text-sm px-4 py-3 rounded-lg shadow-lg max-w-xs`;
-    t.textContent = msg;
+    t.className = `toast ${colors[type] || colors.info} text-white text-sm px-4 py-3 rounded-lg shadow-lg max-w-xs flex items-center gap-2`;
+    t.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'warning' ? 'fa-triangle-exclamation' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info'}"></i><span>${msg}</span>`;
     host.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 2600);
     setTimeout(() => t.remove(), 3000);
   }
 
   function probBadge(level) {
-    const map = { Alta: 'bg-green-100 text-green-700', Media: 'bg-cc-amber/25 text-cc-navy', Baja: 'bg-red-100 text-red-700' };
+    const map = { Alta: 'bg-cc-green/15 text-cc-green700', Media: 'bg-cc-amber/20 text-cc-navy', Baja: 'bg-red-100 text-cc-red' };
     return `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${map[level] || 'bg-gray-100 text-gray-600'}">${level}</span>`;
   }
 
   function createStore(initial) {
-    let state = initial;
-    const subs = [];
+    let state = initial; const subs = [];
     return {
       get: () => state,
       set: (patch) => { state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) }; subs.forEach((fn) => fn(state)); },
@@ -36,370 +42,244 @@
     };
   }
 
-  /* MODULO 1 — OPTIMIZADOR DE ANUNCIO IA */
-  const modOptimizador = (function () {
-    const store = createStore({
-      titulo: 'Apartamento en arriendo — Cedritos, Bogotá',
-      descripcion: 'Apartamento de 2 habitaciones, 1 baño, cocina integral. Zona tranquila y bien ubicada cerca de transporte.',
-      precio: 2400000, zonaPrecioMin: 2100000, zonaPrecioMax: 3200000, fotosMejoradas: false,
-      atributos: { parqueaderoVisitantes: false, administracionIncluida: false, gimnasio: false, petFriendly: false, deposito: false }
-    });
+  function sectionHead(title, desc, right = '') {
+    return `<div class="flex items-end justify-between flex-wrap gap-3 mb-5"><div><h2 class="text-lg font-bold text-cc-navy">${title}</h2><p class="text-sm text-cc-g600 mt-0.5">${desc}</p></div>${right}</div>`;
+  }
 
-    function computeScore(s) {
-      let score = 0;
-      score += s.fotosMejoradas ? 30 : 15;
-      const desc = s.descripcion.trim();
-      const words = desc ? desc.split(/\s+/).length : 0;
-      let descScore = clamp(Math.round((words / 60) * 22), 0, 22);
-      const kw = ['parqueadero', 'administración', 'administracion', 'gimnasio', 'iluminado', 'remodelado', 'transporte'];
-      const hits = kw.filter((k) => desc.toLowerCase().includes(k)).length;
-      descScore += Math.min(hits * 2, 8);
-      score += Math.min(descScore, 30);
-      const attrCount = Object.values(s.atributos).filter(Boolean).length;
-      score += attrCount * 5;
-      if (s.precio >= s.zonaPrecioMin && s.precio <= s.zonaPrecioMax) score += 15;
-      else { const mid = (s.zonaPrecioMin + s.zonaPrecioMax) / 2; const dev = Math.abs(s.precio - mid) / mid; score += clamp(Math.round(15 - dev * 30), 0, 15); }
-      return clamp(Math.round(score), 0, 100);
-    }
-
-    const attrLabels = {
-      parqueaderoVisitantes: 'Parqueadero de visitantes', administracionIncluida: 'Administración incluida',
-      gimnasio: 'Gimnasio / zona húmeda', petFriendly: 'Pet friendly', deposito: 'Depósito / bodega'
-    };
-
-    function scoreColor(score) { if (score >= 85) return '#277619'; if (score >= 60) return '#FF9D21'; return '#DC0A0A'; }
-
-    function render() {
-      const s = store.get();
-      const score = computeScore(s);
-      const strong = score >= 85;
-      const color = scoreColor(score);
-      const circ = 2 * Math.PI * 52;
-      const offset = circ - (score / 100) * circ;
-      const range = s.zonaPrecioMax - s.zonaPrecioMin;
-      const posPct = clamp(((s.precio - s.zonaPrecioMin) / range) * 100, 0, 100);
-      const inRange = s.precio >= s.zonaPrecioMin && s.precio <= s.zonaPrecioMax;
-      const photoBadge = s.fotosMejoradas
-        ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">Óptimas</span>'
-        : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">Baja luz / resolución</span>';
-
-      el('view-optimizador').innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6 flex items-center gap-5">
-            <div class="relative w-32 h-32 flex-shrink-0">
-              <svg viewBox="0 0 120 120" class="w-32 h-32 -rotate-90">
-                <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" stroke-width="12"/>
-                <circle class="score-ring" cx="60" cy="60" r="52" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-3xl font-extrabold" style="color:${color}">${score}</span>
-                <span class="text-[10px] text-gray-400 uppercase tracking-wide">/ 100</span>
-              </div>
-            </div>
-            <div>
-              <p class="text-xs font-semibold text-cc-text uppercase">Score de Calidad IA</p>
-              <p class="text-sm text-cc-navy font-bold mt-1">${strong ? 'Anuncio destacado' : score >= 60 ? 'Mejorable' : 'Requiere atención'}</p>
-              <p class="text-xs text-gray-500 mt-2 leading-relaxed">La IA evalúa fotos, descripción, atributos y precio frente a la competencia.</p>
-            </div>
-          </div>
-          <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="card rounded-xl border shadow-sm p-6 ${strong ? 'bg-green-50 border-green-200' : 'bg-white border-cc-border'}">
-              <div class="flex items-center justify-between"><span class="text-xs font-semibold text-cc-text uppercase">Visualizaciones estimadas</span>${strong ? '<span class="text-green-600 text-xs font-bold">activo</span>' : '<span class="text-gray-400 text-xs">bloqueado</span>'}</div>
-              <p class="text-3xl font-extrabold mt-2 ${strong ? 'text-green-600' : 'text-gray-300'}">${strong ? '+115%' : '—'}</p>
-              <p class="text-xs text-gray-500 mt-1">${strong ? 'Al superar 85/100 tu anuncio entra a resultados destacados.' : 'Alcanza 85+ para desbloquear el impulso.'}</p>
-            </div>
-            <div class="card rounded-xl border shadow-sm p-6 ${strong ? 'bg-green-50 border-green-200' : 'bg-white border-cc-border'}">
-              <div class="flex items-center justify-between"><span class="text-xs font-semibold text-cc-text uppercase">Leads cualificados</span>${strong ? '<span class="text-green-600 text-xs font-bold">activo</span>' : '<span class="text-gray-400 text-xs">bloqueado</span>'}</div>
-              <p class="text-3xl font-extrabold mt-2 ${strong ? 'text-green-600' : 'text-gray-300'}">${strong ? '+42%' : '—'}</p>
-              <p class="text-xs text-gray-500 mt-1">${strong ? 'Mejores fotos y datos completos atraen leads con intención real.' : 'Completa el diagnóstico para proyectar leads.'}</p>
-            </div>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Calidad de fotos</h3>${photoBadge}</div>
-            <div class="flex gap-2 mb-4">
-              ${[1, 2, 3, 4].map(() => `<div class="flex-1 aspect-video rounded-lg border ${s.fotosMejoradas ? 'border-green-300' : 'border-cc-border'} relative overflow-hidden" style="background:${s.fotosMejoradas ? 'linear-gradient(135deg,#e8f5ee,#cfeede)' : 'linear-gradient(135deg,#3a3a3a,#5a5a5a)'}"><span class="absolute bottom-1 right-1 text-[9px] px-1 rounded ${s.fotosMejoradas ? 'bg-green-600 text-white' : 'bg-black/60 text-white'}">${s.fotosMejoradas ? 'HD' : 'oscura'}</span></div>`).join('')}
-            </div>
-            <button id="btnFotos" class="w-full text-sm font-semibold px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 ${s.fotosMejoradas ? 'bg-green-100 text-green-700 cursor-default' : 'bg-cc-navy text-white hover:bg-cc-navy2'}">
-              ${s.fotosMejoradas ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Fotos optimizadas (+15 aplicado)' : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m0 16v1m8-9h1M3 12h1"/></svg> Mejorar fotos con IA'}
-            </button>
-          </div>
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <div class="flex items-center justify-between mb-1"><h3 class="text-sm font-bold text-cc-navy">Benchmark de precio</h3><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${inRange ? 'bg-green-100 text-green-700' : 'bg-cc-amber/25 text-cc-navy'}">${inRange ? 'En rango ideal' : 'Fuera de rango'}</span></div>
-            <p class="text-xs text-gray-500 mb-4">Inmuebles similares en Cedritos: ${fmtCOP(s.zonaPrecioMin)} – ${fmtCOP(s.zonaPrecioMax)}</p>
-            <div class="relative h-3 rounded-full bg-gradient-to-r from-cc-blue via-green-400 to-cc-red mb-2"><div class="absolute -top-1.5 w-6 h-6 rounded-full bg-white border-2 border-cc-navy shadow -ml-3" style="left:${posPct}%"></div></div>
-            <div class="flex justify-between text-[10px] text-gray-400 mb-4"><span>${fmtCOP(s.zonaPrecioMin)}</span><span>${fmtCOP(s.zonaPrecioMax)}</span></div>
-            <label class="text-xs font-semibold text-cc-text">Tu precio: <span class="text-cc-navy font-bold">${fmtCOP(s.precio)}</span> / mes</label>
-            <input id="inpPrecio" type="range" class="cc-range w-full mt-2" min="${s.zonaPrecioMin - 500000}" max="${s.zonaPrecioMax + 500000}" step="50000" value="${s.precio}">
-          </div>
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Descripción & título</h3><span class="text-[11px] text-gray-400" id="wordCount"></span></div>
-            <input id="inpTitulo" class="w-full text-sm border border-cc-border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:border-cc-blue" value="${s.titulo.replace(/"/g, '&quot;')}">
-            <textarea id="inpDesc" rows="4" class="w-full text-sm border border-cc-border rounded-lg px-3 py-2 focus:outline-none focus:border-cc-blue resize-none">${s.descripcion}</textarea>
-            <p class="text-[11px] text-gray-500 mt-2">El score se recalcula en vivo mientras editas.</p>
-          </div>
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <h3 class="text-sm font-bold text-cc-navy mb-1">Atributos & recomendaciones IA</h3>
-            <div class="bg-cc-blue/10 border border-cc-blue/30 rounded-lg px-3 py-2 mb-3 flex gap-2">
-              <svg class="w-4 h-4 text-cc-blue flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <p class="text-[11px] text-cc-navy leading-snug">Recomendación IA: agrega si incluye <b>parqueadero de visitantes</b> y <b>administración</b>, son los filtros más usados en esta zona.</p>
-            </div>
-            <div class="space-y-2">
-              ${Object.keys(attrLabels).map((k) => `<label class="flex items-center justify-between text-sm cursor-pointer"><span>${attrLabels[k]}</span><input type="checkbox" data-attr="${k}" ${s.atributos[k] ? 'checked' : ''} class="attr-check w-4 h-4 accent-cc-navy"></label>`).join('')}
-            </div>
-          </div>
-        </div>`;
-
-      const wc = s.descripcion.trim() ? s.descripcion.trim().split(/\s+/).length : 0;
-      const wcEl = el('wordCount');
-      if (wcEl) wcEl.textContent = `${wc} palabras`;
-      bind();
-    }
-
-    function bind() {
-      const btn = el('btnFotos');
-      if (btn && !store.get().fotosMejoradas) {
-        btn.addEventListener('click', () => {
-          btn.disabled = true;
-          btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Retocando con IA…';
-          setTimeout(() => { store.set({ fotosMejoradas: true }); toast('Fotos retocadas con IA · Score +15', 'success'); }, 1100);
-        });
-      }
-      const precio = el('inpPrecio');
-      if (precio) precio.addEventListener('input', (e) => store.set({ precio: Number(e.target.value) }));
-      const desc = el('inpDesc');
-      if (desc) desc.addEventListener('input', (e) => store.set({ descripcion: e.target.value }));
-      const titulo = el('inpTitulo');
-      if (titulo) titulo.addEventListener('input', (e) => store.set({ titulo: e.target.value }));
-      document.querySelectorAll('.attr-check').forEach((c) => {
-        c.addEventListener('change', (e) => { const key = e.target.getAttribute('data-attr'); store.set((st) => ({ atributos: { ...st.atributos, [key]: e.target.checked } })); });
-      });
-    }
-
-    let lastFocus = null;
-    store.subscribe(() => {
-      lastFocus = document.activeElement ? document.activeElement.id : null;
-      render();
-      if (lastFocus === 'inpDesc' || lastFocus === 'inpTitulo') {
-        const node = el(lastFocus);
-        if (node) { node.focus(); const len = node.value.length; node.setSelectionRange(len, len); }
-      }
-    });
-
-    return { render };
-  })();
-
-  window.OficinaVirtual = { modOptimizador, utils: { fmtCOP, fmtNum, probBadge, toast, createStore, clamp, el } };
+  window.OficinaVirtual = { utils: { fmtCOP, fmtNum, probBadge, toast, createStore, clamp, el, sectionHead } };
 })();
 
-/* MODULO 2 — LEAD 360 & SIGUIENTE MEJOR ACCION */
+/* SECCION: INMUEBLES PUBLICADOS */
 (function () {
   'use strict';
-  const { fmtCOP, probBadge, toast, createStore, el } = window.OficinaVirtual.utils;
+  const { fmtCOP, toast, createStore, el } = window.OficinaVirtual.utils;
+  const PROPS = [
+    { code: 'CC-84213', tipo: 'Apartamento', tx: 'Arriendo', precio: 2400000, ciudad: 'Bogota', barrio: 'Cedritos', hab: 2, banos: 1, area: 62, dias: 21, leads: 8, activo: true, foto: 'linear-gradient(135deg,#3E98CC,#006098)' },
+    { code: 'CC-84090', tipo: 'Apartamento', tx: 'Venta', precio: 335000000, ciudad: 'Medellin', barrio: 'Laureles', hab: 3, banos: 2, area: 88, dias: 12, leads: 14, activo: true, destacado: true, foto: 'linear-gradient(135deg,#53A532,#277619)' },
+    { code: 'CC-83771', tipo: 'Casa', tx: 'Venta', precio: 620000000, ciudad: 'Medellin', barrio: 'Envigado', hab: 4, banos: 3, area: 180, dias: 5, leads: 3, activo: true, foto: 'linear-gradient(135deg,#FF9D21,#DB7C18)' },
+    { code: 'CC-83540', tipo: 'Apartaestudio', tx: 'Arriendo', precio: 1750000, ciudad: 'Bogota', barrio: 'Chapinero', hab: 1, banos: 1, area: 34, dias: 0, leads: 0, activo: false, foto: 'linear-gradient(135deg,#7B8F9D,#5D6F7E)' }
+  ];
+  const store = createStore({ tab: 'activas', filtro: '' });
+
+  function planPanel() {
+    return `<div class="rounded-xl border border-cc-g200 bg-white p-5 mb-5"><div class="flex items-center justify-between flex-wrap gap-4"><div class="flex items-center gap-4"><div class="w-12 h-12 rounded-lg bg-cc-blueSoft flex items-center justify-center text-cc-primary text-xl"><i class="fa-solid fa-crown"></i></div><div><p class="text-sm font-bold text-cc-navy">Plan Premium Inmobiliarias</p><p class="text-xs text-cc-g600">Dias disponibles: <b class="text-cc-navy">48</b> · Vence: 22/10/2026</p></div></div><div class="flex items-center gap-6"><div class="text-center"><p class="text-lg font-extrabold text-cc-navy">4</p><p class="text-[11px] text-cc-g500">Publicados</p></div><div class="text-center"><p class="text-lg font-extrabold text-cc-green700">25</p><p class="text-[11px] text-cc-g500">Leads mes</p></div><button class="text-sm font-semibold px-4 py-2 rounded-lg bg-cc-primary hover:bg-cc-p600 text-white">Comprar plan</button></div></div></div>`;
+  }
+  function productsStrip() {
+    const items = [['fa-camera-retro','Fotos profesionales','2 disponibles'],['fa-star','Inmuebles destacados','1 en uso'],['fa-arrow-trend-up','Inmuebles Ascendidos','3 disponibles'],['fa-bullhorn','Inmuebles pautados','0 disponibles']];
+    return `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">${items.map(([ico,t,s]) => `<div class="rounded-xl border border-cc-g200 bg-white p-3 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-cc-blueSoft flex items-center justify-center text-cc-primary"><i class="fa-solid ${ico}"></i></div><div class="min-w-0"><p class="text-xs font-semibold text-cc-navy truncate">${t}</p><p class="text-[11px] text-cc-g500">${s}</p></div></div>`).join('')}</div>`;
+  }
+  function propCard(p) {
+    const precioLabel = p.tx === 'Arriendo' ? 'Valor Arriendo' : 'Valor Venta';
+    return `<article class="card bg-white rounded-xl border border-cc-g200 overflow-hidden"><div class="flex flex-col sm:flex-row"><div class="relative sm:w-56 h-40 sm:h-auto flex-shrink-0" style="background:${p.foto}">${p.destacado ? '<span class="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cc-amber text-cc-navy"><i class="fa-solid fa-star"></i> Destacado</span>' : ''}${!p.activo ? '<span class="absolute inset-0 bg-black/45 flex items-center justify-center text-white text-xs font-semibold"><i class="fa-solid fa-eye mr-1"></i> Inactivo</span>' : ''}</div><div class="flex-1 p-4"><div class="flex items-start justify-between gap-2"><div><p class="text-[11px] text-cc-g500">${precioLabel}</p><p class="text-lg font-extrabold text-cc-navy">${fmtCOP(p.precio)}${p.tx === 'Arriendo' ? '<span class="text-xs font-medium text-cc-g500">/mes</span>' : ''}</p><p class="text-sm text-cc-g700 mt-0.5">${p.tipo} en ${p.tx.toLowerCase()}</p><p class="text-[12px] text-cc-g600"><i class="fa-solid fa-location-dot text-cc-primary"></i> ${p.barrio}, ${p.ciudad}</p></div><span class="text-[11px] px-2 py-0.5 rounded-full ${p.activo ? 'bg-cc-green/15 text-cc-green700' : 'bg-gray-100 text-gray-500'}">${p.activo ? 'Activa' : 'Inactiva'}</span></div><div class="flex items-center gap-4 text-[12px] text-cc-g600 mt-3"><span><i class="fa-solid fa-bed text-cc-g500"></i> ${p.hab}</span><span><i class="fa-solid fa-toilet text-cc-g500"></i> ${p.banos}</span><span><i class="fa-solid fa-ruler-combined text-cc-g500"></i> ${p.area} m2</span><span class="ml-auto text-cc-g500">Codigo: ${p.code}</span></div><div class="flex items-center justify-between mt-3 pt-3 border-t border-cc-g200"><div class="flex items-center gap-3 text-[12px]"><span class="text-cc-g600"><i class="fa-regular fa-clock"></i> ${p.dias} dias</span><span class="font-semibold text-cc-navy"><i class="fa-solid fa-users text-cc-primary"></i> ${p.leads} leads</span></div><div class="flex items-center gap-1"><button class="prop-act w-8 h-8 rounded-lg hover:bg-cc-g100 text-cc-g600" title="Compartir"><i class="fa-solid fa-share-nodes"></i></button><button class="prop-act w-8 h-8 rounded-lg hover:bg-cc-g100 text-cc-g600" title="Editar"><i class="fa-regular fa-pen-to-square"></i></button><button class="prop-act w-8 h-8 rounded-lg hover:bg-cc-g100 text-cc-red" title="Eliminar"><i class="fa-regular fa-trash-can"></i></button></div></div></div></div></article>`;
+  }
+  function render() {
+    const s = store.get();
+    const activas = PROPS.filter((p) => p.activo);
+    const inactivas = PROPS.filter((p) => !p.activo);
+    let list = s.tab === 'activas' ? activas : s.tab === 'inactivas' ? inactivas : PROPS;
+    if (s.filtro) list = list.filter((p) => (p.code + ' ' + p.barrio + ' ' + p.ciudad + ' ' + p.tipo).toLowerCase().includes(s.filtro.toLowerCase()));
+    const tab = (id, label, n) => `<button data-tab="${id}" class="px-4 py-2 text-sm rounded-lg ${s.tab === id ? 'bg-cc-primary text-white font-semibold' : 'text-cc-g600 hover:bg-cc-g100'}">${label} <span class="opacity-80">${n}</span></button>`;
+    el('view-publicaciones').innerHTML = `${planPanel()}${productsStrip()}<div class="rounded-xl border border-cc-g200 bg-white p-4 mb-5 flex items-center gap-3"><div class="relative flex-1"><i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-cc-g500"></i><input id="propSearch" class="w-full text-sm border border-cc-g200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-cc-primary" placeholder="Buscar por codigo, ciudad o tipo…" value="${s.filtro}"></div><button class="text-sm font-semibold px-4 py-2 rounded-lg bg-cc-primary hover:bg-cc-p600 text-white whitespace-nowrap"><i class="fa-solid fa-plus"></i> Publicar inmueble</button></div><div class="flex items-center gap-2 mb-4">${tab('activas','Activas',activas.length)}${tab('inactivas','Inactivas',inactivas.length)}${tab('publicadas','Publicadas',PROPS.length)}</div><div class="space-y-4">${list.length ? list.map(propCard).join('') : '<div class="rounded-xl border border-dashed border-cc-g300 bg-white p-10 text-center text-cc-g500 text-sm">Aun no tienes informacion en esta categoria</div>'}</div>`;
+    el('propSearch') && el('propSearch').addEventListener('input', (e) => store.set({ filtro: e.target.value }));
+    document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => store.set({ tab: b.getAttribute('data-tab') })));
+    document.querySelectorAll('.prop-act').forEach((b) => b.addEventListener('click', () => toast('Accion de demo (' + (b.title || 'accion') + ')', 'info')));
+  }
+  let lastFocus = null;
+  store.subscribe(() => { lastFocus = document.activeElement ? document.activeElement.id : null; render(); if (lastFocus === 'propSearch') { const n = el('propSearch'); if (n) { n.focus(); const l = n.value.length; n.setSelectionRange(l, l); } } });
+  window.OficinaVirtual.secPublicaciones = { render };
+})();
+
+/* SECCION: CONTACTOS RECIBIDOS */
+(function () {
+  'use strict';
+  const { toast, el, sectionHead } = window.OficinaVirtual.utils;
+  const CONTACTS = [
+    { code: 'CC-84090', inmueble: 'Apto · Laureles, Medellin', nombre: 'Valentina Rios', tel: '+57 315 555 1212', canal: 'WhatsApp', fecha: '04/09/2026', tipo: 'Formulario' },
+    { code: 'CC-84213', inmueble: 'Apto · Cedritos, Bogota', nombre: 'Laura Gomez', tel: '+57 300 123 4567', canal: 'Telefono', fecha: '04/09/2026', tipo: 'Llamada' },
+    { code: 'CC-83771', inmueble: 'Casa · Envigado, Medellin', nombre: 'Andres Restrepo', tel: '+57 310 987 6543', canal: 'WhatsApp', fecha: '03/09/2026', tipo: 'Formulario' },
+    { code: 'CC-84090', inmueble: 'Apto · Laureles, Medellin', nombre: 'Camilo Duarte', tel: '+57 320 445 8890', canal: 'Email', fecha: '02/09/2026', tipo: 'Formulario' },
+    { code: 'CC-84213', inmueble: 'Apto · Cedritos, Bogota', nombre: 'Daniela Pena', tel: '+57 301 778 2211', canal: 'WhatsApp', fecha: '01/09/2026', tipo: 'Formulario' }
+  ];
+  const canalBadge = (c) => {
+    const map = { WhatsApp: 'bg-cc-green/15 text-cc-green700', 'Telefono': 'bg-cc-blue/15 text-cc-p700', Email: 'bg-cc-amber/20 text-cc-navy' };
+    const ico = { WhatsApp: 'fa-whatsapp', 'Telefono': 'fa-phone', Email: 'fa-envelope' };
+    const brand = c === 'WhatsApp' ? 'fa-brands' : 'fa-solid';
+    return `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${map[c] || 'bg-gray-100'}"><i class="${brand} ${ico[c]}"></i> ${c}</span>`;
+  };
+  function render() {
+    el('view-contactos').innerHTML = `${sectionHead('Contactos recibidos', 'Leads generados por tus inmuebles publicados', '<button id="dlContacts" class="text-sm font-semibold px-4 py-2 rounded-lg border border-cc-primary text-cc-primary hover:bg-cc-blueSoft"><i class="fa-solid fa-download"></i> Descargar reporte</button>')}<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5"><div class="rounded-xl border border-cc-g200 bg-white p-4"><p class="text-[11px] uppercase text-cc-g500">Total contactos</p><p class="text-2xl font-extrabold text-cc-navy">${CONTACTS.length}</p></div><div class="rounded-xl border border-cc-g200 bg-white p-4"><p class="text-[11px] uppercase text-cc-g500">Por WhatsApp</p><p class="text-2xl font-extrabold text-cc-green700">${CONTACTS.filter(c=>c.canal==='WhatsApp').length}</p></div><div class="rounded-xl border border-cc-g200 bg-white p-4"><p class="text-[11px] uppercase text-cc-g500">Inmuebles con leads</p><p class="text-2xl font-extrabold text-cc-navy">3</p></div><div class="rounded-xl border border-cc-g200 bg-white p-4"><p class="text-[11px] uppercase text-cc-g500">Ultimos 7 dias</p><p class="text-2xl font-extrabold text-cc-navy">${CONTACTS.length}</p></div></div><div class="rounded-xl border border-cc-g200 bg-white overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-cc-g100 text-cc-g600"><tr><th class="text-left font-semibold px-4 py-3">Contacto</th><th class="text-left font-semibold px-4 py-3">Inmueble</th><th class="text-left font-semibold px-4 py-3">Canal</th><th class="text-left font-semibold px-4 py-3">Tipo</th><th class="text-left font-semibold px-4 py-3">Fecha</th><th class="text-right font-semibold px-4 py-3">Accion</th></tr></thead><tbody class="divide-y divide-cc-g200">${CONTACTS.map((c) => `<tr class="hover:bg-cc-zpBg"><td class="px-4 py-3"><p class="font-semibold text-cc-navy">${c.nombre}</p><p class="text-[11px] text-cc-g500">${c.tel}</p></td><td class="px-4 py-3 text-cc-g700"><span class="text-[11px] text-cc-g500">${c.code}</span><br>${c.inmueble}</td><td class="px-4 py-3">${canalBadge(c.canal)}</td><td class="px-4 py-3 text-cc-g600">${c.tipo}</td><td class="px-4 py-3 text-cc-g600">${c.fecha}</td><td class="px-4 py-3 text-right"><button class="ct-wa w-8 h-8 rounded-lg hover:bg-cc-g100 text-cc-green700" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button><button class="ct-view w-8 h-8 rounded-lg hover:bg-cc-g100 text-cc-primary" title="Ver detalle"><i class="fa-solid fa-arrow-up-right-from-square"></i></button></td></tr>`).join('')}</tbody></table></div></div>`;
+    el('dlContacts') && el('dlContacts').addEventListener('click', () => toast('Generando reporte de leads (.xlsx)…', 'success'));
+    document.querySelectorAll('.ct-wa').forEach((b) => b.addEventListener('click', () => toast('Abriendo WhatsApp con el contacto', 'success')));
+    document.querySelectorAll('.ct-view').forEach((b) => b.addEventListener('click', () => toast('Detalle del lead (demo)', 'info')));
+  }
+  window.OficinaVirtual.secContactos = { render };
+})();
+
+/* SECCION: MIS REPORTES */
+(function () {
+  'use strict';
+  const { el, sectionHead, toast } = window.OficinaVirtual.utils;
+  const SERIE = [4, 7, 5, 9, 12, 8, 14, 11, 16, 13, 18, 25];
+  const MESES = ['Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep'];
+  function render() {
+    const max = Math.max(...SERIE);
+    el('view-reportes').innerHTML = `${sectionHead('Mis Reportes', 'Comportamiento de tus leads en los ultimos 12 meses', '<button id="dlRep" class="text-sm font-semibold px-4 py-2 rounded-lg border border-cc-primary text-cc-primary hover:bg-cc-blueSoft"><i class="fa-solid fa-download"></i> Exportar</button>')}<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">${[['fa-users','Leads totales','132','+18% vs mes ant.'],['fa-house-circle-check','En venta','54','41%'],['fa-key','En arriendo','78','59%'],['fa-bolt','Leads inmediatos','29','22%']].map(([i,t,q,c]) => `<div class="rounded-xl border border-cc-g200 bg-white p-4"><div class="w-9 h-9 rounded-lg bg-cc-blueSoft flex items-center justify-center text-cc-primary mb-2"><i class="fa-solid ${i}"></i></div><p class="text-2xl font-extrabold text-cc-navy">${q}</p><p class="text-[11px] text-cc-g500">${t} · <span class="text-cc-green700 font-semibold">${c}</span></p></div>`).join('')}</div><div class="rounded-xl border border-cc-g200 bg-white p-5"><p class="text-sm font-bold text-cc-navy mb-4">Leads por mes</p><div class="flex items-end gap-2 h-48">${SERIE.map((v, idx) => `<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t-md bg-gradient-to-t from-cc-primary to-cc-blue" style="height:${(v/max)*100}%" title="${v} leads"></div><span class="text-[10px] text-cc-g500">${MESES[idx]}</span></div>`).join('')}</div></div>`;
+    el('dlRep') && el('dlRep').addEventListener('click', () => toast('Exportando reporte…', 'success'));
+  }
+  window.OficinaVirtual.secReportes = { render };
+})();
+
+/* SECCION: PRODUCTOS Y SERVICIOS */
+(function () {
+  'use strict';
+  const { fmtCOP, el, sectionHead, toast } = window.OficinaVirtual.utils;
+  const PLANS = [
+    { name: 'Plan Basico', price: 89000, feats: ['Hasta 10 inmuebles', 'Estadisticas basicas', 'Soporte por correo'], color: 'border-cc-g200' },
+    { name: 'Plan Premium', price: 189000, feats: ['Hasta 50 inmuebles', '5 destacados/mes', 'Oficina Virtual IA', 'Soporte prioritario'], color: 'border-cc-primary', current: true },
+    { name: 'Plan Constructora', price: 349000, feats: ['Inmuebles ilimitados', 'Proyectos y salas de venta', 'Reportes avanzados', 'Ejecutivo dedicado'], color: 'border-cc-g200' }
+  ];
+  function render() {
+    el('view-productos').innerHTML = `${sectionHead('Productos y Servicios', 'Adquiere alguno de nuestros planes para impulsar el potencial de tus inmuebles.')}<div class="grid grid-cols-1 md:grid-cols-3 gap-4">${PLANS.map((p) => `<div class="card rounded-xl border-2 ${p.color} bg-white p-5 relative">${p.current ? '<span class="absolute -top-2 right-4 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cc-primary text-white">Tu plan actual</span>' : ''}<p class="text-sm font-bold text-cc-navy">${p.name}</p><p class="mt-2"><span class="text-2xl font-extrabold text-cc-navy">${fmtCOP(p.price)}</span><span class="text-xs text-cc-g500">/mes</span></p><ul class="mt-4 space-y-2">${p.feats.map((f) => `<li class="text-sm text-cc-g700 flex items-center gap-2"><i class="fa-solid fa-check text-cc-green700"></i> ${f}</li>`).join('')}</ul><button data-plan="${p.name}" class="plan-btn mt-5 w-full text-sm font-semibold px-4 py-2.5 rounded-lg ${p.current ? 'bg-cc-g100 text-cc-g600 cursor-default' : 'bg-cc-primary hover:bg-cc-p600 text-white'}">${p.current ? 'Plan activo' : 'Adquirir plan'}</button></div>`).join('')}</div>`;
+    document.querySelectorAll('.plan-btn').forEach((b) => b.addEventListener('click', () => { if (!/actual|activo/i.test(b.textContent)) toast('Iniciando compra: ' + b.getAttribute('data-plan'), 'success'); }));
+  }
+  window.OficinaVirtual.secProductos = { render };
+})();
+
+/* SECCION: MIS DATOS */
+(function () {
+  'use strict';
+  const { el, sectionHead, toast } = window.OficinaVirtual.utils;
+  function field(label, value, ico) {
+    return `<div><label class="text-[11px] uppercase text-cc-g500">${label}</label><div class="mt-1 relative"><i class="fa-solid ${ico} absolute left-3 top-1/2 -translate-y-1/2 text-cc-g500"></i><input class="w-full text-sm border border-cc-g200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-cc-primary" value="${value}"></div></div>`;
+  }
+  function render() {
+    el('view-perfil').innerHTML = `${sectionHead('Mis Datos', 'Informacion de tu inmobiliaria')}<div class="rounded-xl border border-cc-g200 bg-white p-6 max-w-3xl"><div class="flex items-center gap-4 mb-6"><div class="w-16 h-16 rounded-full bg-cc-navy text-white flex items-center justify-center text-xl font-bold">IB</div><div><p class="font-bold text-cc-navy">Inmobiliaria Bolivar</p><p class="text-xs text-cc-g500">NIT 900.123.456-7 · Plan Premium</p></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${field('Razon social', 'Inmobiliaria Bolivar S.A.S', 'fa-building')}${field('Correo', 'contacto@inmobolivar.co', 'fa-envelope')}${field('Telefono', '+57 601 555 4433', 'fa-phone')}${field('Ciudad', 'Bogota D.C.', 'fa-location-dot')}</div><button id="saveProfile" class="mt-6 text-sm font-semibold px-5 py-2.5 rounded-lg bg-cc-primary hover:bg-cc-p600 text-white"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>`;
+    el('saveProfile') && el('saveProfile').addEventListener('click', () => toast('Datos actualizados', 'success'));
+  }
+  window.OficinaVirtual.secPerfil = { render };
+})();
+
+/* SECCION: OFICINA VIRTUAL IA (3 modulos con sub-tabs) */
+(function () {
+  'use strict';
+  const { fmtCOP, probBadge, toast, createStore, clamp, el } = window.OficinaVirtual.utils;
+  const nav = createStore({ tab: 'optimizador' });
+
+  const optim = createStore({ titulo: 'Apartamento en arriendo — Cedritos, Bogota', descripcion: 'Apartamento de 2 habitaciones, 1 bano, cocina integral. Zona tranquila y bien ubicada cerca de transporte.', precio: 2400000, zMin: 2100000, zMax: 3200000, fotos: false, attrs: { parqueadero: false, admin: false, gym: false, pet: false, deposito: false } });
+  const ATTR = { parqueadero: 'Parqueadero de visitantes', admin: 'Administracion incluida', gym: 'Gimnasio / zona humeda', pet: 'Pet friendly', deposito: 'Deposito / bodega' };
+  function score(s) {
+    let sc = s.fotos ? 30 : 15;
+    const d = s.descripcion.trim(); const w = d ? d.split(/\s+/).length : 0;
+    let ds = clamp(Math.round((w / 60) * 22), 0, 22);
+    const kw = ['parqueadero','administracion','gimnasio','iluminado','remodelado','transporte'];
+    ds += Math.min(kw.filter((k) => d.toLowerCase().includes(k)).length * 2, 8);
+    sc += Math.min(ds, 30);
+    sc += Object.values(s.attrs).filter(Boolean).length * 5;
+    if (s.precio >= s.zMin && s.precio <= s.zMax) sc += 15;
+    else { const m = (s.zMin + s.zMax) / 2; sc += clamp(Math.round(15 - (Math.abs(s.precio - m) / m) * 30), 0, 15); }
+    return clamp(Math.round(sc), 0, 100);
+  }
+  const scColor = (v) => v >= 85 ? '#277619' : v >= 60 ? '#FF9D21' : '#DC0A0A';
+  function renderOptim() {
+    const s = optim.get(); const v = score(s); const strong = v >= 85; const col = scColor(v);
+    const circ = 2 * Math.PI * 52; const off = circ - (v / 100) * circ;
+    const range = s.zMax - s.zMin; const pos = clamp(((s.precio - s.zMin) / range) * 100, 0, 100);
+    const inR = s.precio >= s.zMin && s.precio <= s.zMax;
+    return `<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5"><div class="card bg-white rounded-xl border border-cc-g200 p-6 flex items-center gap-5"><div class="relative w-32 h-32 flex-shrink-0"><svg viewBox="0 0 120 120" class="w-32 h-32 -rotate-90"><circle cx="60" cy="60" r="52" fill="none" stroke="#E9ECEF" stroke-width="12"/><circle class="score-ring" cx="60" cy="60" r="52" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/></svg><div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-3xl font-extrabold" style="color:${col}">${v}</span><span class="text-[10px] text-cc-g500 uppercase">/ 100</span></div></div><div><p class="text-xs font-semibold text-cc-g600 uppercase">Score de Calidad IA</p><p class="text-sm text-cc-navy font-bold mt-1">${strong ? 'Anuncio destacado' : v >= 60 ? 'Mejorable' : 'Requiere atencion'}</p><p class="text-xs text-cc-g500 mt-2 leading-relaxed">La IA evalua fotos, descripcion, atributos y precio frente a la competencia.</p></div></div><div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4"><div class="card rounded-xl border p-6 ${strong ? 'bg-cc-green/5 border-cc-green/30' : 'bg-white border-cc-g200'}"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-cc-g600 uppercase">Visualizaciones estimadas</span>${strong ? '<span class="text-cc-green700 text-xs font-bold">activo</span>' : '<span class="text-cc-g300 text-xs">bloqueado</span>'}</div><p class="text-3xl font-extrabold mt-2 ${strong ? 'text-cc-green700' : 'text-cc-g300'}">${strong ? '+115%' : '—'}</p><p class="text-xs text-cc-g500 mt-1">${strong ? 'Al superar 85/100 entra a resultados destacados.' : 'Alcanza 85+ para desbloquear el impulso.'}</p></div><div class="card rounded-xl border p-6 ${strong ? 'bg-cc-green/5 border-cc-green/30' : 'bg-white border-cc-g200'}"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-cc-g600 uppercase">Leads cualificados</span>${strong ? '<span class="text-cc-green700 text-xs font-bold">activo</span>' : '<span class="text-cc-g300 text-xs">bloqueado</span>'}</div><p class="text-3xl font-extrabold mt-2 ${strong ? 'text-cc-green700' : 'text-cc-g300'}">${strong ? '+42%' : '—'}</p><p class="text-xs text-cc-g500 mt-1">${strong ? 'Fotos y datos completos atraen leads con intencion real.' : 'Completa el diagnostico para proyectar leads.'}</p></div></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-5"><div class="card bg-white rounded-xl border border-cc-g200 p-6"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Calidad de fotos</h3>${s.fotos ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cc-green/15 text-cc-green700">Optimas</span>' : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-cc-red">Baja luz / resolucion</span>'}</div><div class="flex gap-2 mb-4">${[1,2,3,4].map(() => `<div class="flex-1 aspect-video rounded-lg border ${s.fotos ? 'border-cc-green/40' : 'border-cc-g200'} relative overflow-hidden" style="background:${s.fotos ? 'linear-gradient(135deg,#e8f5ee,#cfeede)' : 'linear-gradient(135deg,#3a3a3a,#5a5a5a)'}"><span class="absolute bottom-1 right-1 text-[9px] px-1 rounded ${s.fotos ? 'bg-cc-green700 text-white' : 'bg-black/60 text-white'}">${s.fotos ? 'HD' : 'oscura'}</span></div>`).join('')}</div><button id="oBtnFotos" class="w-full text-sm font-semibold px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 ${s.fotos ? 'bg-cc-green/15 text-cc-green700 cursor-default' : 'bg-cc-primary hover:bg-cc-p600 text-white'}">${s.fotos ? '<i class="fa-solid fa-check"></i> Fotos optimizadas (+15 aplicado)' : '<i class="fa-solid fa-wand-magic-sparkles"></i> Mejorar fotos con IA'}</button></div><div class="card bg-white rounded-xl border border-cc-g200 p-6"><div class="flex items-center justify-between mb-1"><h3 class="text-sm font-bold text-cc-navy">Benchmark de precio</h3><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${inR ? 'bg-cc-green/15 text-cc-green700' : 'bg-cc-amber/20 text-cc-navy'}">${inR ? 'En rango ideal' : 'Fuera de rango'}</span></div><p class="text-xs text-cc-g500 mb-4">Similares en Cedritos: ${fmtCOP(s.zMin)} – ${fmtCOP(s.zMax)}</p><div class="relative h-3 rounded-full bg-gradient-to-r from-cc-blue via-cc-green to-cc-red mb-2"><div class="absolute -top-1.5 w-6 h-6 rounded-full bg-white border-2 border-cc-navy shadow -ml-3" style="left:${pos}%"></div></div><div class="flex justify-between text-[10px] text-cc-g500 mb-4"><span>${fmtCOP(s.zMin)}</span><span>${fmtCOP(s.zMax)}</span></div><label class="text-xs font-semibold text-cc-g600">Tu precio: <span class="text-cc-navy font-bold">${fmtCOP(s.precio)}</span> / mes</label><input id="oPrecio" type="range" class="cc-range w-full mt-2" min="${s.zMin - 500000}" max="${s.zMax + 500000}" step="50000" value="${s.precio}"></div><div class="card bg-white rounded-xl border border-cc-g200 p-6"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Descripcion & titulo</h3><span class="text-[11px] text-cc-g500" id="oWc"></span></div><input id="oTitulo" class="w-full text-sm border border-cc-g200 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:border-cc-primary" value="${s.titulo.replace(/"/g,'&quot;')}"><textarea id="oDesc" rows="4" class="w-full text-sm border border-cc-g200 rounded-lg px-3 py-2 focus:outline-none focus:border-cc-primary resize-none">${s.descripcion}</textarea><p class="text-[11px] text-cc-g500 mt-2">El score se recalcula en vivo mientras editas.</p></div><div class="card bg-white rounded-xl border border-cc-g200 p-6"><h3 class="text-sm font-bold text-cc-navy mb-1">Atributos & recomendaciones IA</h3><div class="bg-cc-blueSoft border border-cc-blue/30 rounded-lg px-3 py-2 mb-3 flex gap-2"><i class="fa-solid fa-lightbulb text-cc-primary mt-0.5"></i><p class="text-[11px] text-cc-navy leading-snug">Recomendacion IA: agrega si incluye <b>parqueadero de visitantes</b> y <b>administracion</b>, son los filtros mas usados en esta zona.</p></div><div class="space-y-2">${Object.keys(ATTR).map((k) => `<label class="flex items-center justify-between text-sm cursor-pointer text-cc-g700"><span>${ATTR[k]}</span><input type="checkbox" data-attr="${k}" ${s.attrs[k] ? 'checked' : ''} class="o-attr w-4 h-4 accent-cc-primary"></label>`).join('')}</div></div></div>`;
+  }
+  function bindOptim() {
+    const s = optim.get();
+    const wc = el('oWc'); if (wc) wc.textContent = (s.descripcion.trim() ? s.descripcion.trim().split(/\s+/).length : 0) + ' palabras';
+    const b = el('oBtnFotos');
+    if (b && !s.fotos) b.addEventListener('click', () => { b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Retocando con IA…'; setTimeout(() => { optim.set({ fotos: true }); toast('Fotos retocadas con IA · Score +15', 'success'); }, 1000); });
+    const pr = el('oPrecio'); if (pr) pr.addEventListener('input', (e) => optim.set({ precio: Number(e.target.value) }));
+    const de = el('oDesc'); if (de) de.addEventListener('input', (e) => optim.set({ descripcion: e.target.value }));
+    const ti = el('oTitulo'); if (ti) ti.addEventListener('input', (e) => optim.set({ titulo: e.target.value }));
+    document.querySelectorAll('.o-attr').forEach((c) => c.addEventListener('change', (e) => { const k = e.target.getAttribute('data-attr'); optim.set((st) => ({ attrs: { ...st.attrs, [k]: e.target.checked } })); }));
+  }
 
   const LEADS = [
-    { id: 'L-1042', nombre: 'Laura Gómez', prob: 'Alta', avatar: 'LG', inmueble: 'Apto arriendo · Cedritos, Bogotá', telefono: '573001234567', presupuesto: 2600000, presupuestoValidado: true, zonas: ['Cedritos', 'Contador', 'Toberín'], creditosPrevios: 2, ultimaVisita: 'hace 2 h', tipo: 'Arriendo', comportamiento: 'Simuló crédito y comparó 3 aptos de 2 hab en la última semana.', nba: { inmueble: 'Apto 2 hab · Contador — 2.500.000/mes (con parqueadero)', pitch: 'Hola Laura, vi que buscas 2 habitaciones en Cedritos. Tengo uno en Contador dentro de tu presupuesto, con parqueadero y administración incluida. ¿Te agendo una visita mañana?' } },
-    { id: 'L-1043', nombre: 'Andrés Restrepo', prob: 'Media', avatar: 'AR', inmueble: 'Casa venta · Envigado, Medellín', telefono: '573109876543', presupuesto: 620000000, presupuestoValidado: true, zonas: ['Envigado', 'El Poblado'], creditosPrevios: 1, ultimaVisita: 'ayer', tipo: 'Venta', comportamiento: 'Revisó casas en El Poblado pero abandonó por precio. Sensible al valor.', nba: { inmueble: 'Casa 3 hab · Envigado — 590.000.000 (opción compra de cartera)', pitch: 'Hola Andrés, encontré una casa en Envigado por debajo de tu tope. Además podemos evaluar compra de cartera para bajar tu cuota. ¿Hablamos hoy?' } },
-    { id: 'L-1044', nombre: 'Valentina Ríos', prob: 'Alta', avatar: 'VR', inmueble: 'Apto venta · Laureles, Medellín', telefono: '573155551212', presupuesto: 340000000, presupuestoValidado: true, zonas: ['Laureles', 'Estadio'], creditosPrevios: 3, ultimaVisita: 'hace 40 min', tipo: 'Venta', comportamiento: 'Alta intención: descargó 2 fichas y solicitó info de crédito hipotecario.', nba: { inmueble: 'Apto 3 hab · Laureles — 335.000.000 (pre-aprobado Davivienda)', pitch: 'Hola Valentina, tengo el apto en Laureles que buscabas y ya tienes pre-aprobación Davivienda. Podemos dejar la oferta formal lista hoy mismo. ¿Te llamo?' } },
-    { id: 'L-1045', nombre: 'Carlos Méndez', prob: 'Baja', avatar: 'CM', inmueble: 'Apto arriendo · Chapinero, Bogotá', telefono: '573201119988', presupuesto: 1800000, presupuestoValidado: false, zonas: ['Chapinero'], creditosPrevios: 0, ultimaVisita: 'hace 5 días', tipo: 'Arriendo', comportamiento: 'Una sola visita, sin presupuesto validado. Requiere calificación.', nba: { inmueble: 'Apto 1 hab · Chapinero — 1.750.000/mes (con póliza de arriendo)', pitch: 'Hola Carlos, ¿sigues buscando en Chapinero? Tengo una opción dentro de tu rango con póliza de arrendamiento incluida para agilizar el proceso. ¿Te comparto la ficha?' } }
+    { id: 'L-1042', nombre: 'Laura Gomez', prob: 'Alta', av: 'LG', inm: 'Apto arriendo · Cedritos, Bogota', tel: '573001234567', pres: 2600000, val: true, zonas: ['Cedritos','Contador','Toberin'], cred: 2, ult: 'hace 2 h', tipo: 'Arriendo', comp: 'Simulo credito y comparo 3 aptos de 2 hab en la ultima semana.', nba: { inm: 'Apto 2 hab · Contador — 2.500.000/mes (con parqueadero)', pitch: 'Hola Laura, vi que buscas 2 habitaciones en Cedritos. Tengo uno en Contador dentro de tu presupuesto, con parqueadero y administracion incluida. Te agendo una visita manana?' } },
+    { id: 'L-1043', nombre: 'Andres Restrepo', prob: 'Media', av: 'AR', inm: 'Casa venta · Envigado, Medellin', tel: '573109876543', pres: 620000000, val: true, zonas: ['Envigado','El Poblado'], cred: 1, ult: 'ayer', tipo: 'Venta', comp: 'Reviso casas en El Poblado pero abandono por precio. Sensible al valor.', nba: { inm: 'Casa 3 hab · Envigado — 590.000.000 (opcion compra de cartera)', pitch: 'Hola Andres, encontre una casa en Envigado por debajo de tu tope. Ademas podemos evaluar compra de cartera para bajar tu cuota. Hablamos hoy?' } },
+    { id: 'L-1044', nombre: 'Valentina Rios', prob: 'Alta', av: 'VR', inm: 'Apto venta · Laureles, Medellin', tel: '573155551212', pres: 340000000, val: true, zonas: ['Laureles','Estadio'], cred: 3, ult: 'hace 40 min', tipo: 'Venta', comp: 'Alta intencion: descargo 2 fichas y solicito info de credito hipotecario.', nba: { inm: 'Apto 3 hab · Laureles — 335.000.000 (pre-aprobado Davivienda)', pitch: 'Hola Valentina, tengo el apto en Laureles que buscabas y ya tienes pre-aprobacion Davivienda. Podemos dejar la oferta formal lista hoy mismo. Te llamo?' } },
+    { id: 'L-1045', nombre: 'Carlos Mendez', prob: 'Baja', av: 'CM', inm: 'Apto arriendo · Chapinero, Bogota', tel: '573201119988', pres: 1800000, val: false, zonas: ['Chapinero'], cred: 0, ult: 'hace 5 dias', tipo: 'Arriendo', comp: 'Una sola visita, sin presupuesto validado. Requiere calificacion.', nba: { inm: 'Apto 1 hab · Chapinero — 1.750.000/mes (con poliza de arriendo)', pitch: 'Hola Carlos, sigues buscando en Chapinero? Tengo una opcion dentro de tu rango con poliza de arrendamiento incluida para agilizar el proceso. Te comparto la ficha?' } }
   ];
-
-  const store = createStore({ selectedId: LEADS[0].id });
-
-  function renderList(s) {
-    return LEADS.map((l) => {
-      const active = l.id === s.selectedId;
-      return `<button data-lead="${l.id}" class="w-full text-left px-4 py-3 rounded-lg border transition flex items-center gap-3 ${active ? 'border-cc-blue bg-cc-blue/10' : 'border-cc-border bg-white hover:border-cc-blue/50'}"><div class="w-9 h-9 rounded-full bg-cc-navy text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">${l.avatar}</div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-sm font-semibold text-cc-navy truncate">${l.nombre}</span>${probBadge(l.prob)}</div><p class="text-[11px] text-gray-500 truncate">${l.inmueble}</p></div></button>`;
-    }).join('');
+  const leadNav = createStore({ sel: LEADS[0].id });
+  function renderLeads() {
+    const s = leadNav.get(); const l = LEADS.find((x) => x.id === s.sel);
+    const list = LEADS.map((x) => `<button data-lead="${x.id}" class="w-full text-left px-4 py-3 rounded-lg border transition flex items-center gap-3 ${x.id === s.sel ? 'border-cc-primary bg-cc-blueSoft' : 'border-cc-g200 bg-white hover:border-cc-primary/50'}"><div class="w-9 h-9 rounded-full bg-cc-navy text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">${x.av}</div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-sm font-semibold text-cc-navy truncate">${x.nombre}</span>${probBadge(x.prob)}</div><p class="text-[11px] text-cc-g500 truncate">${x.inm}</p></div></button>`).join('');
+    return `<div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-1"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Leads recibidos</h3><span class="text-[11px] text-cc-g500">${LEADS.length} activos</span></div><div class="space-y-2">${list}</div></div><div class="lg:col-span-2"><div class="card bg-white rounded-xl border border-cc-g200 p-6"><div class="flex items-center gap-4 mb-5"><div class="w-14 h-14 rounded-full bg-cc-navy text-white flex items-center justify-center text-lg font-bold">${l.av}</div><div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-g600">${l.tipo}</span></div><p class="text-xs text-cc-g500">${l.id} · Interesado en ${l.inm} · Ult. actividad ${l.ult}</p></div></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5"><div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Presupuesto</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(l.pres)}</p><p class="text-[10px] ${l.val ? 'text-cc-green700' : 'text-cc-red'}">${l.val ? 'validado' : 'sin validar'}</p></div><div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Creditos simulados</p><p class="text-sm font-bold text-cc-navy">${l.cred}</p><p class="text-[10px] text-cc-g500">previos</p></div><div class="rounded-lg bg-cc-zpBg p-3 col-span-2"><p class="text-[10px] uppercase text-cc-g500">Zonas exploradas</p><p class="text-sm font-semibold text-cc-navy leading-tight">${l.zonas.join(' · ')}</p></div></div><div class="rounded-lg border border-cc-g200 p-3 mb-5"><p class="text-[10px] uppercase text-cc-g500 mb-1">Comportamiento detectado</p><p class="text-sm text-cc-g700">${l.comp}</p></div><div class="rounded-xl border-2 border-cc-amber bg-cc-amber/10 p-5"><div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-wand-magic-sparkles text-cc-amber"></i><h4 class="text-sm font-bold text-cc-navy">Siguiente Mejor Accion (IA)</h4></div><div class="bg-white rounded-lg p-3 mb-3"><p class="text-[10px] uppercase text-cc-g500">Inmueble alternativo sugerido</p><p class="text-sm font-semibold text-cc-navy">${l.nba.inm}</p></div><div class="bg-white rounded-lg p-3 mb-4"><p class="text-[10px] uppercase text-cc-g500 mb-1">Script de abordaje personalizado</p><p class="text-sm text-cc-g700 italic">"${l.nba.pitch}"</p></div><div class="flex flex-wrap gap-2"><button id="lWa" class="text-sm font-semibold px-4 py-2.5 rounded-lg bg-cc-green700 hover:brightness-110 text-white flex items-center gap-2"><i class="fa-brands fa-whatsapp"></i> Contactar por WhatsApp</button><button id="lCopy" class="text-sm font-semibold px-4 py-2.5 rounded-lg border border-cc-g200 text-cc-navy hover:bg-cc-g100 flex items-center gap-2"><i class="fa-regular fa-copy"></i> Copiar script</button></div></div></div></div>`;
+  }
+  function bindLeads() {
+    const l = LEADS.find((x) => x.id === leadNav.get().sel);
+    document.querySelectorAll('[data-lead]').forEach((b) => b.addEventListener('click', () => leadNav.set({ sel: b.getAttribute('data-lead') })));
+    const cp = el('lCopy'); if (cp) cp.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(l.nba.pitch).catch(()=>{}); toast('Script copiado al portapapeles', 'success'); });
+    const wa = el('lWa'); if (wa) wa.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(l.nba.pitch).catch(()=>{}); window.open(`https://wa.me/${l.tel}?text=${encodeURIComponent(l.nba.pitch)}`, '_blank', 'noopener'); toast('Abriendo WhatsApp · script copiado', 'success'); });
   }
 
-  function renderDetail(l) {
-    return `
-      <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-        <div class="flex items-center gap-4 mb-5">
-          <div class="w-14 h-14 rounded-full bg-cc-navy text-white flex items-center justify-center text-lg font-bold">${l.avatar}</div>
-          <div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${l.tipo}</span></div><p class="text-xs text-gray-500">${l.id} · Interesado en ${l.inmueble} · Últ. actividad ${l.ultimaVisita}</p></div>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          <div class="rounded-lg bg-cc-bg p-3"><p class="text-[10px] uppercase text-gray-500">Presupuesto</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(l.presupuesto)}</p><p class="text-[10px] ${l.presupuestoValidado ? 'text-green-600' : 'text-cc-red'}">${l.presupuestoValidado ? '✓ validado' : '⚠ sin validar'}</p></div>
-          <div class="rounded-lg bg-cc-bg p-3"><p class="text-[10px] uppercase text-gray-500">Créditos simulados</p><p class="text-sm font-bold text-cc-navy">${l.creditosPrevios}</p><p class="text-[10px] text-gray-400">previos</p></div>
-          <div class="rounded-lg bg-cc-bg p-3 col-span-2"><p class="text-[10px] uppercase text-gray-500">Zonas de interés exploradas</p><p class="text-sm font-semibold text-cc-navy leading-tight">${l.zonas.join(' · ')}</p></div>
-        </div>
-        <div class="rounded-lg border border-cc-border p-3 mb-5"><p class="text-[10px] uppercase text-gray-500 mb-1">Comportamiento detectado</p><p class="text-sm text-cc-text">${l.comportamiento}</p></div>
-        <div class="rounded-xl border-2 border-cc-amber bg-cc-amber/10 p-5">
-          <div class="flex items-center gap-2 mb-3"><svg class="w-5 h-5 text-cc-amber" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 002 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"/></svg><h4 class="text-sm font-bold text-cc-navy">Siguiente Mejor Acción (IA)</h4></div>
-          <div class="bg-white rounded-lg p-3 mb-3"><p class="text-[10px] uppercase text-gray-500">Inmueble alternativo sugerido</p><p class="text-sm font-semibold text-cc-navy">${l.nba.inmueble}</p></div>
-          <div class="bg-white rounded-lg p-3 mb-4"><p class="text-[10px] uppercase text-gray-500 mb-1">Script de abordaje personalizado</p><p id="pitchText" class="text-sm text-cc-text italic">"${l.nba.pitch}"</p></div>
-          <div class="flex flex-wrap gap-2">
-            <button id="btnWhatsapp" class="text-sm font-semibold px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.597 20.13c1.676.995 3.276 1.591 5.392 1.593 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.599 5.317l-1.005 3.667 3.907-1.021z"/></svg>Contactar por WhatsApp</button>
-            <button id="btnCopy" class="text-sm font-semibold px-4 py-2.5 rounded-lg border border-cc-border text-cc-navy hover:bg-cc-bg flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Copiar script</button>
-          </div>
-        </div>
-      </div>`;
+  const acc = createStore({ cliente: 'Valentina Rios', valor: 335000000, inicialPct: 30, plazo: 15, tasa: 11.5, cartera: false, saldo: 90000000, tasaCartera: 18.0, consultado: false, aprob: false, monto: 0, seg: { arriendo: false, hogar: false, vida: false } });
+  const cuota = (m, t, a) => { if (m <= 0) return 0; const im = Math.pow(1 + t / 100, 1 / 12) - 1; const n = a * 12; return im === 0 ? m / n : (m * im) / (1 - Math.pow(1 + im, -n)); };
+  const PRIMAS = { arriendo: 85000, hogar: 42000, vida: 28000 };
+  function renderAcc() {
+    const s = acc.get(); const ini = s.valor * (s.inicialPct / 100); const fin = s.valor - ini; const c = cuota(fin, s.tasa, s.plazo);
+    const cAnt = cuota(s.saldo, s.tasaCartera, 5); const cNue = cuota(s.saldo, s.tasa, 5); const ahorro = Math.max(0, cAnt - cNue);
+    const prima = Object.keys(s.seg).reduce((a, k) => a + (s.seg[k] ? PRIMAS[k] : 0), 0);
+    const total = c + prima + (s.cartera ? cNue : 0);
+    return `<div class="mb-5 rounded-xl bg-gradient-to-r from-cc-navy to-cc-p700 text-white p-5 flex items-center justify-between flex-wrap gap-3"><div><p class="text-xs text-cc-blue uppercase tracking-wide">Diferenciador unico · Grupo Bolivar</p><h3 class="text-lg font-bold">Cierre transaccional para ${s.cliente}</h3></div><span class="text-[11px] bg-white/10 px-3 py-1 rounded-full">Davivienda · Seguros Bolivar</span></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 space-y-5"><div class="card bg-white rounded-xl border border-cc-g200 p-6"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Estado de bancarizacion</h3>${s.consultado ? (s.aprob ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cc-green/15 text-cc-green700">Pre-aprobado</span>' : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-cc-red">En estudio</span>') : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cc-g100 text-cc-g500">Sin consultar</span>'}</div>${s.consultado && s.aprob ? `<div class="rounded-lg bg-cc-green/5 border border-cc-green/30 p-4 flex items-center justify-between flex-wrap gap-2"><div><p class="text-[11px] text-cc-g500">Monto pre-aprobado (tiempo real)</p><p class="text-xl font-extrabold text-cc-green700">${fmtCOP(s.monto)}</p></div><div class="text-right"><p class="text-[11px] text-cc-g500">Tasa hipotecaria</p><p class="text-sm font-bold text-cc-navy">${s.tasa}% E.A.</p></div></div>` : '<p class="text-xs text-cc-g500 mb-3">Consulta en tiempo real la bancarizacion y pre-aprobacion financiera del cliente con Davivienda.</p>'}<button id="aPre" class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-lg ${s.aprob ? 'bg-cc-green/15 text-cc-green700 cursor-default' : 'bg-cc-red hover:brightness-95 text-white'} flex items-center justify-center gap-2"><i class="fa-solid ${s.aprob ? 'fa-circle-check' : 'fa-building-columns'}"></i> ${s.aprob ? 'Cliente pre-aprobado Davivienda' : 'Consultar Pre-aprobado Davivienda'}</button></div><div class="card bg-white rounded-xl border border-cc-g200 p-6"><h3 class="text-sm font-bold text-cc-navy mb-4">Simulador de Credito de Vivienda</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="text-xs font-semibold text-cc-g600">Valor del inmueble: <span class="text-cc-navy font-bold">${fmtCOP(s.valor)}</span></label><input id="aValor" type="range" class="cc-range w-full mt-2" min="120000000" max="900000000" step="5000000" value="${s.valor}"></div><div><label class="text-xs font-semibold text-cc-g600">Cuota inicial: <span class="text-cc-navy font-bold">${s.inicialPct}%</span> (${fmtCOP(ini)})</label><input id="aIni" type="range" class="cc-range w-full mt-2" min="20" max="70" step="1" value="${s.inicialPct}"></div><div><label class="text-xs font-semibold text-cc-g600">Plazo: <span class="text-cc-navy font-bold">${s.plazo} anos</span></label><input id="aPlazo" type="range" class="cc-range w-full mt-2" min="5" max="30" step="1" value="${s.plazo}"></div><div><label class="text-xs font-semibold text-cc-g600">Tasa: <span class="text-cc-navy font-bold">${s.tasa}% E.A.</span></label><input id="aTasa" type="range" class="cc-range w-full mt-2" min="9" max="16" step="0.1" value="${s.tasa}"></div></div><div class="mt-4 rounded-lg bg-cc-zpBg p-4 flex items-center justify-between flex-wrap gap-2"><div><p class="text-[11px] text-cc-g500">Monto a financiar</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(fin)}</p></div><div class="text-right"><p class="text-[11px] text-cc-g500">Cuota mensual estimada</p><p class="text-xl font-extrabold text-cc-navy">${fmtCOP(c)}</p></div></div><label class="flex items-center justify-between mt-4 cursor-pointer"><span class="text-sm font-semibold text-cc-navy">Incluir Compra de Cartera</span><input id="aChk" type="checkbox" ${s.cartera ? 'checked' : ''} class="w-4 h-4 accent-cc-primary"></label>${s.cartera ? `<div class="mt-3 rounded-lg border border-cc-blue/30 bg-cc-blueSoft p-4"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2"><div><label class="text-[11px] font-semibold text-cc-g600">Saldo cartera: <span class="text-cc-navy font-bold">${fmtCOP(s.saldo)}</span></label><input id="aSaldo" type="range" class="cc-range w-full mt-1" min="10000000" max="300000000" step="5000000" value="${s.saldo}"></div><div><label class="text-[11px] font-semibold text-cc-g600">Tasa actual: <span class="text-cc-navy font-bold">${s.tasaCartera}% E.A.</span></label><input id="aTasaC" type="range" class="cc-range w-full mt-1" min="12" max="30" step="0.5" value="${s.tasaCartera}"></div></div><p class="text-sm text-cc-green700 font-semibold">Ahorro estimado: ${fmtCOP(ahorro)} / mes al migrar a ${s.tasa}% E.A.</p></div>` : ''}</div></div><div class="space-y-5"><div class="card bg-white rounded-xl border border-cc-g200 p-6"><h3 class="text-sm font-bold text-cc-navy mb-1">Seguros Bolivar</h3><p class="text-[11px] text-cc-g500 mb-3">Precargados en la oferta segun el negocio.</p>${[['arriendo','Poliza de arrendamiento',PRIMAS.arriendo],['hogar','Seguro de hogar',PRIMAS.hogar],['vida','Seguro de vida deudor',PRIMAS.vida]].map(([k,l,p]) => `<label class="flex items-center justify-between py-2 border-b border-cc-g200 last:border-0 cursor-pointer"><span class="text-sm text-cc-g700">${l}<br><span class="text-[11px] text-cc-g500">${fmtCOP(p)}/mes</span></span><input type="checkbox" data-seg="${k}" ${s.seg[k] ? 'checked' : ''} class="a-seg w-4 h-4 accent-cc-primary"></label>`).join('')}</div><div class="card bg-cc-navy text-white rounded-xl p-6"><h3 class="text-sm font-bold mb-3">Oferta formal</h3><div class="space-y-1.5 text-sm"><div class="flex justify-between"><span class="text-cc-blue">Cuota credito</span><span class="font-semibold">${fmtCOP(c)}</span></div>${s.cartera ? `<div class="flex justify-between"><span class="text-cc-blue">Cuota cartera</span><span class="font-semibold">${fmtCOP(cNue)}</span></div>` : ''}<div class="flex justify-between"><span class="text-cc-blue">Seguros</span><span class="font-semibold">${fmtCOP(prima)}</span></div><div class="border-t border-white/20 my-2"></div><div class="flex justify-between text-base"><span class="font-bold">Total mensual</span><span class="font-extrabold text-cc-amber">${fmtCOP(total)}</span></div></div><button id="aProp" class="mt-4 w-full text-sm font-bold px-4 py-3 rounded-lg bg-cc-amber text-cc-navy hover:brightness-95 flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i> Enviar propuesta en 1 clic</button></div></div></div>`;
+  }
+  function bindAcc() {
+    const s = acc.get();
+    const bp = el('aPre');
+    if (bp && !s.aprob) bp.addEventListener('click', () => { bp.disabled = true; bp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando Davivienda…'; setTimeout(() => { const m = Math.round(acc.get().valor * 0.72 / 1000000) * 1000000; acc.set({ consultado: true, aprob: true, monto: m }); toast('Cliente pre-aprobado por Davivienda', 'success'); }, 1100); });
+    const R = (id, k, cast = Number) => { const n = el(id); if (n) n.addEventListener('input', (e) => acc.set({ [k]: cast(e.target.value) })); };
+    R('aValor', 'valor'); R('aIni', 'inicialPct'); R('aPlazo', 'plazo'); R('aTasa', 'tasa', parseFloat); R('aSaldo', 'saldo'); R('aTasaC', 'tasaCartera', parseFloat);
+    const ch = el('aChk'); if (ch) ch.addEventListener('change', (e) => acc.set({ cartera: e.target.checked }));
+    document.querySelectorAll('.a-seg').forEach((c) => c.addEventListener('change', (e) => { const k = e.target.getAttribute('data-seg'); acc.set((st) => ({ seg: { ...st.seg, [k]: e.target.checked } })); }));
+    const pr = el('aProp'); if (pr) pr.addEventListener('click', () => { if (!acc.get().aprob) { toast('Consulta primero el pre-aprobado Davivienda', 'warning'); return; } toast('Propuesta formal enviada al cliente', 'success'); });
   }
 
+  const TABS = [['optimizador', 'Optimizador de Anuncio IA', 'fa-wand-magic-sparkles'],['leads', 'Lead 360', 'fa-user-magnifying-glass'],['acelerador', 'Acelerador Grupo Bolivar', 'fa-bolt']];
   function render() {
-    const s = store.get();
-    const lead = LEADS.find((l) => l.id === s.selectedId);
-    el('view-leads').innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-1"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Leads recibidos</h3><span class="text-[11px] text-gray-400">${LEADS.length} activos</span></div><div class="space-y-2">${renderList(s)}</div></div><div class="lg:col-span-2">${renderDetail(lead)}</div></div>`;
-    bind(lead);
+    const t = nav.get().tab;
+    const body = t === 'optimizador' ? renderOptim() : t === 'leads' ? renderLeads() : renderAcc();
+    el('view-oficina-ia').innerHTML = `<div class="rounded-xl border border-cc-g200 bg-white p-4 mb-5 flex items-start gap-3"><div class="w-10 h-10 rounded-lg bg-cc-amber/20 flex items-center justify-center text-cc-amber text-lg"><i class="fa-solid fa-wand-magic-sparkles"></i></div><div class="flex-1"><p class="text-sm font-bold text-cc-navy">Oficina Virtual IA</p><p class="text-xs text-cc-g600">Optimiza anuncios, gestiona leads con IA y cierra con credito y seguros del Grupo Bolivar. <span class="text-cc-g400">Respuesta competitiva frente a Fincaraiz y Metrocuadrado.</span></p></div></div><div class="border-b border-cc-g200 mb-5 flex gap-4 overflow-x-auto">${TABS.map(([id, label, ico]) => `<button data-ia="${id}" class="ia-tab whitespace-nowrap px-1 pb-3 text-sm font-semibold ${t === id ? 'active' : 'text-cc-g600 hover:text-cc-navy'}"><i class="fa-solid ${ico} mr-1"></i> ${label}</button>`).join('')}</div><div>${body}</div>`;
+    document.querySelectorAll('[data-ia]').forEach((b) => b.addEventListener('click', () => nav.set({ tab: b.getAttribute('data-ia') })));
+    if (t === 'optimizador') bindOptim(); else if (t === 'leads') bindLeads(); else bindAcc();
   }
-
-  function bind(lead) {
-    document.querySelectorAll('[data-lead]').forEach((b) => { b.addEventListener('click', () => store.set({ selectedId: b.getAttribute('data-lead') })); });
-    const copy = el('btnCopy');
-    if (copy) copy.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(lead.nba.pitch).catch(() => {}); toast('Script copiado al portapapeles', 'success'); });
-    const wa = el('btnWhatsapp');
-    if (wa) wa.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(lead.nba.pitch).catch(() => {}); const url = `https://wa.me/${lead.telefono}?text=${encodeURIComponent(lead.nba.pitch)}`; window.open(url, '_blank', 'noopener'); toast('Abriendo WhatsApp · script copiado', 'success'); });
-  }
-
-  store.subscribe(render);
-  window.OficinaVirtual.modLeads = { render };
+  function refresh() { if (el('view-oficina-ia').classList.contains('active')) { const focus = document.activeElement ? document.activeElement.id : null; render(); if (focus === 'oDesc' || focus === 'oTitulo') { const n = el(focus); if (n) { n.focus(); const l = n.value.length; n.setSelectionRange(l, l); } } } }
+  nav.subscribe(refresh); optim.subscribe(refresh); leadNav.subscribe(refresh); acc.subscribe(refresh);
+  window.OficinaVirtual.secOficinaIA = { render };
 })();
 
-/* MODULO 3 — ACELERADOR TRANSACCIONAL GRUPO BOLIVAR */
-(function () {
-  'use strict';
-  const { fmtCOP, toast, createStore, clamp, el } = window.OficinaVirtual.utils;
-
-  const store = createStore({
-    cliente: 'Valentina Ríos', valorInmueble: 335000000, cuotaInicialPct: 30, plazoAnios: 15, tasaEA: 11.5,
-    compraCartera: false, saldoCartera: 90000000, tasaCarteraActual: 18.0,
-    preAprobadoConsultado: false, preAprobado: false, montoPreAprobado: 0,
-    seguros: { arrendamiento: false, hogar: false, vida: false }
-  });
-
-  function cuotaMensual(monto, tasaEA, plazoAnios) {
-    if (monto <= 0) return 0;
-    const im = Math.pow(1 + tasaEA / 100, 1 / 12) - 1;
-    const n = plazoAnios * 12;
-    if (im === 0) return monto / n;
-    return (monto * im) / (1 - Math.pow(1 + im, -n));
-  }
-
-  const PRIMAS = { arrendamiento: 85000, hogar: 42000, vida: 28000 };
-
-  function render() {
-    const s = store.get();
-    const cuotaInicial = s.valorInmueble * (s.cuotaInicialPct / 100);
-    const montoFinanciar = s.valorInmueble - cuotaInicial;
-    const cuota = cuotaMensual(montoFinanciar, s.tasaEA, s.plazoAnios);
-    const cuotaCarteraActual = cuotaMensual(s.saldoCartera, s.tasaCarteraActual, 5);
-    const cuotaCarteraNueva = cuotaMensual(s.saldoCartera, s.tasaEA, 5);
-    const ahorroCartera = Math.max(0, cuotaCarteraActual - cuotaCarteraNueva);
-    const primaSeguros = Object.keys(s.seguros).reduce((a, k) => a + (s.seguros[k] ? PRIMAS[k] : 0), 0);
-    const pagoTotalMes = cuota + primaSeguros + (s.compraCartera ? cuotaCarteraNueva : 0);
-
-    el('view-acelerador').innerHTML = `
-      <div class="mb-5 rounded-xl bg-gradient-to-r from-cc-navy to-cc-navy2 text-white p-5 flex items-center justify-between flex-wrap gap-3">
-        <div><p class="text-xs text-cc-blue uppercase tracking-wide">Diferenciador único · Grupo Bolívar</p><h3 class="text-lg font-bold">Cierre transaccional para ${s.cliente}</h3></div>
-        <span class="text-[11px] bg-white/10 px-3 py-1 rounded-full">Davivienda · Seguros Bolívar</span>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div class="lg:col-span-2 space-y-5">
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Estado de bancarización</h3>${s.preAprobadoConsultado ? (s.preAprobado ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">Pre-aprobado</span>' : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">En estudio</span>') : '<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">Sin consultar</span>'}</div>
-            ${s.preAprobadoConsultado && s.preAprobado ? `<div class="rounded-lg bg-green-50 border border-green-200 p-4 flex items-center justify-between flex-wrap gap-2"><div><p class="text-[11px] text-gray-500">Monto pre-aprobado (tiempo real)</p><p class="text-xl font-extrabold text-green-700">${fmtCOP(s.montoPreAprobado)}</p></div><div class="text-right"><p class="text-[11px] text-gray-500">Tasa hipotecaria</p><p class="text-sm font-bold text-cc-navy">${s.tasaEA}% E.A.</p></div></div>` : `<p class="text-xs text-gray-500 mb-3">Consulta en tiempo real la bancarización y pre-aprobación financiera del cliente con Davivienda.</p>`}
-            <button id="btnPreAprob" class="mt-3 w-full text-sm font-semibold px-4 py-2.5 rounded-lg ${s.preAprobado ? 'bg-green-100 text-green-700 cursor-default' : 'bg-cc-red hover:brightness-95 text-white'} flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${s.preAprobado ? 'Cliente pre-aprobado Davivienda' : 'Consultar Pre-aprobado Davivienda'}</button>
-          </div>
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <h3 class="text-sm font-bold text-cc-navy mb-4">Simulador de Crédito de Vivienda</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label class="text-xs font-semibold">Valor del inmueble: <span class="text-cc-navy font-bold">${fmtCOP(s.valorInmueble)}</span></label><input id="inpValor" type="range" class="cc-range w-full mt-2" min="120000000" max="900000000" step="5000000" value="${s.valorInmueble}"></div>
-              <div><label class="text-xs font-semibold">Cuota inicial: <span class="text-cc-navy font-bold">${s.cuotaInicialPct}%</span> (${fmtCOP(cuotaInicial)})</label><input id="inpInicial" type="range" class="cc-range w-full mt-2" min="20" max="70" step="1" value="${s.cuotaInicialPct}"></div>
-              <div><label class="text-xs font-semibold">Plazo: <span class="text-cc-navy font-bold">${s.plazoAnios} años</span></label><input id="inpPlazo" type="range" class="cc-range w-full mt-2" min="5" max="30" step="1" value="${s.plazoAnios}"></div>
-              <div><label class="text-xs font-semibold">Tasa: <span class="text-cc-navy font-bold">${s.tasaEA}% E.A.</span></label><input id="inpTasa" type="range" class="cc-range w-full mt-2" min="9" max="16" step="0.1" value="${s.tasaEA}"></div>
-            </div>
-            <div class="mt-4 rounded-lg bg-cc-bg p-4 flex items-center justify-between flex-wrap gap-2"><div><p class="text-[11px] text-gray-500">Monto a financiar</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(montoFinanciar)}</p></div><div class="text-right"><p class="text-[11px] text-gray-500">Cuota mensual estimada</p><p class="text-xl font-extrabold text-cc-navy">${fmtCOP(cuota)}</p></div></div>
-            <label class="flex items-center justify-between mt-4 cursor-pointer"><span class="text-sm font-semibold text-cc-navy">Incluir Compra de Cartera</span><input id="chkCartera" type="checkbox" ${s.compraCartera ? 'checked' : ''} class="w-4 h-4 accent-cc-navy"></label>
-            ${s.compraCartera ? `<div class="mt-3 rounded-lg border border-cc-blue/30 bg-cc-blue/5 p-4"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2"><div><label class="text-[11px] font-semibold">Saldo cartera actual: <span class="text-cc-navy font-bold">${fmtCOP(s.saldoCartera)}</span></label><input id="inpSaldo" type="range" class="cc-range w-full mt-1" min="10000000" max="300000000" step="5000000" value="${s.saldoCartera}"></div><div><label class="text-[11px] font-semibold">Tasa actual del cliente: <span class="text-cc-navy font-bold">${s.tasaCarteraActual}% E.A.</span></label><input id="inpTasaCartera" type="range" class="cc-range w-full mt-1" min="12" max="30" step="0.5" value="${s.tasaCarteraActual}"></div></div><p class="text-sm text-green-700 font-semibold">Ahorro estimado: ${fmtCOP(ahorroCartera)} / mes al migrar a ${s.tasaEA}% E.A.</p></div>` : ''}
-          </div>
-        </div>
-        <div class="space-y-5">
-          <div class="card bg-white rounded-xl border border-cc-border shadow-sm p-6">
-            <h3 class="text-sm font-bold text-cc-navy mb-1">Seguros Bolívar</h3>
-            <p class="text-[11px] text-gray-500 mb-3">Precargados en la oferta según el tipo de negocio.</p>
-            ${[['arrendamiento', 'Póliza de arrendamiento', PRIMAS.arrendamiento], ['hogar', 'Seguro de hogar', PRIMAS.hogar], ['vida', 'Seguro de vida deudor', PRIMAS.vida]].map(([k, label, prima]) => `<label class="flex items-center justify-between py-2 border-b border-cc-border last:border-0 cursor-pointer"><span class="text-sm">${label}<br><span class="text-[11px] text-gray-400">${fmtCOP(prima)}/mes</span></span><input type="checkbox" data-seguro="${k}" ${s.seguros[k] ? 'checked' : ''} class="seg-check w-4 h-4 accent-cc-navy"></label>`).join('')}
-          </div>
-          <div class="card bg-cc-navy text-white rounded-xl shadow-sm p-6">
-            <h3 class="text-sm font-bold mb-3">Oferta formal</h3>
-            <div class="space-y-1.5 text-sm">
-              <div class="flex justify-between"><span class="text-cc-blue">Cuota crédito</span><span class="font-semibold">${fmtCOP(cuota)}</span></div>
-              ${s.compraCartera ? `<div class="flex justify-between"><span class="text-cc-blue">Cuota cartera</span><span class="font-semibold">${fmtCOP(cuotaCarteraNueva)}</span></div>` : ''}
-              <div class="flex justify-between"><span class="text-cc-blue">Seguros</span><span class="font-semibold">${fmtCOP(primaSeguros)}</span></div>
-              <div class="border-t border-white/20 my-2"></div>
-              <div class="flex justify-between text-base"><span class="font-bold">Total mensual</span><span class="font-extrabold text-cc-amber">${fmtCOP(pagoTotalMes)}</span></div>
-            </div>
-            <button id="btnPropuesta" class="mt-4 w-full text-sm font-bold px-4 py-3 rounded-lg bg-cc-amber text-cc-navy hover:brightness-95 flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Enviar propuesta en 1 clic</button>
-          </div>
-        </div>
-      </div>`;
-    bind();
-  }
-
-  function bind() {
-    const s = store.get();
-    const btnPre = el('btnPreAprob');
-    if (btnPre && !s.preAprobado) {
-      btnPre.addEventListener('click', () => {
-        btnPre.disabled = true;
-        btnPre.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Consultando Davivienda…';
-        setTimeout(() => { const monto = Math.round(store.get().valorInmueble * 0.72 / 1000000) * 1000000; store.set({ preAprobadoConsultado: true, preAprobado: true, montoPreAprobado: monto }); toast('Cliente pre-aprobado por Davivienda', 'success'); }, 1200);
-      });
-    }
-    const bindRange = (id, key, cast = Number) => { const n = el(id); if (n) n.addEventListener('input', (e) => store.set({ [key]: cast(e.target.value) })); };
-    bindRange('inpValor', 'valorInmueble');
-    bindRange('inpInicial', 'cuotaInicialPct');
-    bindRange('inpPlazo', 'plazoAnios');
-    bindRange('inpTasa', 'tasaEA', (v) => parseFloat(v));
-    bindRange('inpSaldo', 'saldoCartera');
-    bindRange('inpTasaCartera', 'tasaCarteraActual', (v) => parseFloat(v));
-    const chk = el('chkCartera');
-    if (chk) chk.addEventListener('change', (e) => store.set({ compraCartera: e.target.checked }));
-    document.querySelectorAll('.seg-check').forEach((c) => { c.addEventListener('change', (e) => { const key = e.target.getAttribute('data-seguro'); store.set((st) => ({ seguros: { ...st.seguros, [key]: e.target.checked } })); }); });
-    const prop = el('btnPropuesta');
-    if (prop) prop.addEventListener('click', () => { if (!store.get().preAprobado) { toast('Consulta primero el pre-aprobado Davivienda', 'warning'); return; } toast('Propuesta formal enviada al cliente ✓', 'success'); });
-  }
-
-  store.subscribe(render);
-  window.OficinaVirtual.modAcelerador = { render };
-})();
-
-/* ROUTER */
+/* ROUTER — menu Mi zona privada */
 (function () {
   'use strict';
   const OV = window.OficinaVirtual;
+  const el = (id) => document.getElementById(id);
   const META = {
-    optimizador: { title: 'Optimizador de Anuncio IA', sub: 'Sube la calidad de tu anuncio con IA y gana más visibilidad', render: OV.modOptimizador.render },
-    leads:       { title: 'Lead 360° & Siguiente Mejor Acción', sub: 'Enriquece cada lead y actúa con recomendaciones de IA', render: OV.modLeads.render },
-    acelerador:  { title: 'Acelerador Transaccional Grupo Bolívar', sub: 'Crédito, compra de cartera y seguros integrados en el cierre', render: OV.modAcelerador.render }
+    publicaciones: { title: 'Inmuebles publicados', sub: 'Gestiona y potencia la visibilidad de tus inmuebles', render: OV.secPublicaciones.render },
+    contactos:     { title: 'Contactos recibidos', sub: 'Leads generados por tus inmuebles publicados', render: OV.secContactos.render },
+    reportes:      { title: 'Mis Reportes', sub: 'Estadisticas de leads de tu inmobiliaria', render: OV.secReportes.render },
+    'oficina-ia':  { title: 'Oficina Virtual IA', sub: 'Optimizacion, gestion de leads y cierre con Grupo Bolivar', render: OV.secOficinaIA.render },
+    productos:     { title: 'Productos y Servicios', sub: 'Planes para impulsar tus inmuebles', render: OV.secProductos.render },
+    perfil:        { title: 'Mis Datos', sub: 'Informacion de tu inmobiliaria', render: OV.secPerfil.render }
   };
-
+  const sidebar = el('sidebar'); const backdrop = el('backdrop');
+  function openSidebar() { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); }
+  function closeSidebar() { if (window.innerWidth < 1024) { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); } }
   function activate(view) {
     document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-    document.getElementById('view-' + view).classList.add('active');
-    document.querySelectorAll('.nav-link').forEach((b) => {
-      const on = b.getAttribute('data-view') === view;
-      b.classList.toggle('active', on);
-      b.classList.toggle('text-cc-blue', !on);
-      b.classList.toggle('text-white', on);
-    });
-    const meta = META[view];
-    document.getElementById('viewTitle').textContent = meta.title;
-    document.getElementById('viewSubtitle').textContent = meta.sub;
-    meta.render();
+    el('view-' + view).classList.add('active');
+    document.querySelectorAll('.zp-menu-item').forEach((b) => b.classList.toggle('active', b.getAttribute('data-view') === view));
+    const m = META[view];
+    el('sectionTitle').textContent = m.title;
+    el('sectionSubtitle').textContent = m.sub;
+    m.render();
     closeSidebar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
-  const sidebar = document.getElementById('sidebar');
-  const backdrop = document.getElementById('backdrop');
-  function openSidebar() { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); }
-  function closeSidebar() { if (window.innerWidth < 768) { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); } }
-
-  document.getElementById('menuBtn').addEventListener('click', openSidebar);
+  el('menuBtn').addEventListener('click', openSidebar);
   backdrop.addEventListener('click', closeSidebar);
-  document.querySelectorAll('.nav-link').forEach((b) => { b.addEventListener('click', () => activate(b.getAttribute('data-view'))); });
-
-  activate('optimizador');
+  document.querySelectorAll('.zp-menu-item').forEach((b) => b.addEventListener('click', () => activate(b.getAttribute('data-view'))));
+  activate('publicaciones');
 })();
