@@ -8,17 +8,16 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
-    // Ciencuadras Design System tokens — segurosbolivar/ciencuadras-monorepo-mf
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             cc: {
               primary:  '#097AB2', p600: '#006098', p700: '#004A80', navy: '#00204D',
-              blue: '#3E98CC', blueSoft: '#EAF7FF', green: '#53A532', green700: '#277619',
+              blue: '#3E98CC', blueSoft: '#EAF7FF', green: '#53A532', green600: '#3B8D24', green700: '#277619',
               amber: '#FF9D21', red: '#DC0A0A',
-              g700: '#434F5B', g600: '#5D6F7E', g500: '#7B8F9D', g300: '#BFC9CF',
-              g200: '#DFE4E7', g100: '#F0F3F4', zpBg: '#F7FAFC', zpBanner: '#F0F5FA'
+              g700: '#434F5B', g600: '#5D6F7E', g500: '#7B8F9D', g400: '#9EADB7', g300: '#BFC9CF',
+              g200: '#DFE4E7', g100: '#F0F3F4', zpBg: '#F7FAFC', zpSide: '#F4F8FB', zpBanner: '#F0F5FA'
             }
           },
           fontFamily: { sans: ['Ciencuadras', 'Montserrat', 'sans-serif'] }
@@ -28,15 +27,17 @@
   </script>
   <style>
     body { font-family: 'Ciencuadras', 'Montserrat', sans-serif; color: #434F5B; }
-    .zp-menu-item { border-left: 3px solid transparent; transition: background .15s, border-color .15s; }
-    .zp-menu-item:hover { background: #EAF7FF; }
-    .zp-menu-item.active { background: #EAF7FF; border-left-color: #FF9D21; color: #00204D; font-weight: 600; }
+    .top-link { color: #434F5B; }
+    .top-link:hover { color: #097AB2; }
+    .zp-menu-item { transition: background .15s, color .15s; color: #5D6F7E; }
+    .zp-menu-item:hover { background: #EAF7FF; color: #097AB2; }
+    .zp-menu-item.active { color: #097AB2; font-weight: 600; }
     .zp-menu-item.active .zp-menu-ico { color: #097AB2; }
     .view { display: none; }
     .view.active { display: block; animation: fade .25s ease; }
     @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     .card { transition: transform .2s, box-shadow .2s; }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.08); }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.06); }
     .score-ring { transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1); }
     input[type=range].cc-range { -webkit-appearance:none; height:6px; border-radius:9999px; background:#DFE4E7; outline:none; }
     input[type=range].cc-range::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#097AB2; border:3px solid #FF9D21; cursor:pointer; }
@@ -45,76 +46,80 @@
     @keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
     .ia-tab.active { color: #097AB2; border-bottom-color: #097AB2; }
     .ia-tab { border-bottom: 2px solid transparent; }
+    .dudas-tab { writing-mode: vertical-rl; }
   </style>
 </head>
-<body class="bg-cc-zpBg min-h-screen">
+<body class="bg-white min-h-screen">
 
   <header class="bg-white border-b border-cc-g200 sticky top-0 z-30">
-    <div class="max-w-[1920px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <button id="menuBtn" class="lg:hidden text-cc-navy p-1" aria-label="Abrir menú"><i class="fa-solid fa-bars text-xl"></i></button>
-        <a class="flex items-center gap-2 select-none" href="#">
-          <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-cc-primary text-white font-extrabold">C</span>
-          <span class="text-lg font-extrabold text-cc-navy tracking-tight">cien<span class="text-cc-primary">cuadras</span></span>
-        </a>
-        <span class="hidden md:inline-flex items-center gap-1 ml-2 text-[11px] text-cc-g500 border-l border-cc-g200 pl-3"><i class="fa-solid fa-shield-halved text-cc-blue"></i> Zona privada</span>
-      </div>
-      <div class="flex items-center gap-4">
-        <button class="hidden sm:flex items-center gap-2 text-sm text-cc-g600 hover:text-cc-primary"><i class="fa-regular fa-bell"></i></button>
-        <div class="flex items-center gap-2">
-          <div class="w-9 h-9 rounded-full bg-cc-navy text-white flex items-center justify-center text-sm font-semibold">IB</div>
-          <div class="hidden sm:block leading-tight">
-            <p class="text-sm font-semibold text-cc-navy">Inmobiliaria Bolívar</p>
-            <p class="text-[11px] text-cc-g500">Plan Premium</p>
-          </div>
-        </div>
+    <div class="max-w-[1280px] mx-auto px-4 h-16 flex items-center gap-6">
+      <button id="menuBtn" class="lg:hidden text-cc-navy p-1" aria-label="Abrir menú"><i class="fa-solid fa-bars text-xl"></i></button>
+      <a href="#" class="flex items-center gap-2 select-none flex-shrink-0">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-cc-primary text-white"><i class="fa-solid fa-house-chimney text-sm"></i></span>
+        <span class="text-lg font-extrabold text-cc-primary tracking-tight">cien<span class="text-cc-navy">cuadras</span></span>
+      </a>
+      <nav class="hidden lg:flex items-center gap-6 text-sm flex-1">
+        <a class="top-link" href="#">Compra</a>
+        <a class="top-link" href="#">Arriendo</a>
+        <a class="top-link inline-flex items-center gap-1" href="#">Vender <i class="fa-solid fa-chevron-down text-[10px]"></i></a>
+        <a class="top-link inline-flex items-center gap-1" href="#">Trámites y servicios <i class="fa-solid fa-chevron-down text-[10px]"></i></a>
+        <a class="top-link" href="#">Desde el exterior</a>
+      </nav>
+      <div class="flex items-center gap-4 ml-auto lg:ml-0">
+        <button class="relative text-cc-primary"><i class="fa-solid fa-cart-shopping text-lg"></i></button>
+        <div class="w-8 h-8 rounded-full bg-cc-primary text-white flex items-center justify-center text-xs font-bold">PK</div>
+        <button class="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-cc-green hover:bg-cc-green600 text-white">Publicar <i class="fa-solid fa-camera"></i></button>
       </div>
     </div>
   </header>
 
-  <div class="bg-white border-b border-cc-g200">
-    <div class="max-w-[1920px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between gap-3">
-      <div class="min-w-0">
-        <h1 id="sectionTitle" class="text-xl md:text-2xl font-bold text-cc-g700 truncate">Inmuebles publicados</h1>
-        <p id="sectionSubtitle" class="text-xs md:text-sm text-cc-g600 mt-0.5 truncate">Gestiona y potencia la visibilidad de tus inmuebles</p>
+  <div class="bg-cc-zpBg border-b border-cc-g200">
+    <div class="max-w-[1280px] mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
+      <h1 class="text-2xl font-light text-cc-g600">Mi zona privada</h1>
+      <div class="flex items-center gap-2 flex-wrap">
+        <input class="text-sm bg-white border border-cc-g200 rounded-lg px-3 py-2 w-36 focus:outline-none focus:border-cc-primary placeholder:text-cc-g400" placeholder="Código">
+        <div class="relative">
+          <select class="text-sm bg-white border border-cc-g200 rounded-lg pl-3 pr-8 py-2 w-44 appearance-none focus:outline-none focus:border-cc-primary text-cc-g500">
+            <option>Tipo Transacción</option><option>Arriendo</option><option>Venta</option>
+          </select>
+          <i class="fa-solid fa-chevron-down text-[10px] text-cc-g400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        </div>
+        <input class="text-sm bg-white border border-cc-g200 rounded-lg px-3 py-2 w-40 focus:outline-none focus:border-cc-primary placeholder:text-cc-g400" placeholder="Ciudad">
+        <button class="text-cc-g400 hover:text-cc-primary px-1" title="Limpiar"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="text-sm font-semibold px-5 py-2 rounded-full bg-cc-primary hover:bg-cc-p600 text-white">Buscar</button>
       </div>
-      <div class="hidden md:flex items-center gap-2 text-xs text-cc-g500"><i class="fa-regular fa-circle-question"></i> Prototipo · datos simulados</div>
     </div>
   </div>
 
-  <div class="max-w-[1920px] mx-auto flex">
-    <aside id="sidebar" class="bg-white border-r border-cc-g200 w-64 flex-shrink-0 fixed lg:sticky top-16 lg:top-0 z-20 h-[calc(100vh-4rem)] lg:h-auto lg:min-h-[calc(100vh-8rem)] -translate-x-full lg:translate-x-0 transition-transform overflow-y-auto">
-      <div class="px-5 py-4 border-b border-cc-g200">
-        <p class="text-[11px] uppercase tracking-wide text-cc-g500">Mi zona privada</p>
-        <p class="text-sm font-semibold text-cc-navy">Inmobiliaria Bolívar</p>
-      </div>
-      <nav class="py-2">
-        <button data-view="publicaciones" class="zp-menu-item active w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-regular fa-circle-check"></i></span> Inmuebles publicados</button>
-        <button data-view="contactos" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-solid fa-compress-wide"></i></span> Contactos recibidos</button>
-        <button data-view="reportes" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-regular fa-clipboard-list"></i></span> Mis Reportes</button>
-        <div class="px-5 pt-3 pb-1"><span class="text-[10px] uppercase tracking-wider text-cc-g500">Nuevo</span></div>
-        <button data-view="oficina-ia" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="flex-1">Oficina Virtual IA</span><span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-cc-amber/20 text-cc-amber">IA</span></button>
-        <div class="px-5 pt-3 pb-1"><span class="text-[10px] uppercase tracking-wider text-cc-g500">Cuenta</span></div>
-        <button data-view="productos" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-solid fa-bag-shopping"></i></span> Productos y Servicios</button>
-        <button data-view="perfil" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3 text-cc-g700"><span class="zp-menu-ico w-5 text-center text-cc-g500"><i class="fa-solid fa-user"></i></span> Mis Datos</button>
+  <div class="max-w-[1280px] mx-auto flex bg-white">
+    <aside id="sidebar" class="bg-white border-r border-cc-g200 w-56 flex-shrink-0 fixed lg:sticky top-16 lg:top-0 z-20 h-[calc(100vh-4rem)] lg:h-auto lg:min-h-[70vh] -translate-x-full lg:translate-x-0 transition-transform overflow-y-auto">
+      <nav class="py-4">
+        <button data-view="leads" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-rectangle-list"></i></span> Mis leads</button>
+        <button data-view="publicaciones" class="zp-menu-item active w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center"><i class="fa-solid fa-circle-check"></i></span> Publicaciones</button>
+        <button data-view="productos" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-credit-card"></i></span> Productos y servicios</button>
+        <button data-view="perfil" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-solid fa-user"></i></span> Mis datos</button>
+        <button data-view="facturacion" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-file-lines"></i></span> Datos Facturación</button>
+        <div class="mx-5 my-3 border-t border-cc-g200"></div>
+        <button data-view="oficina-ia" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3"><span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="flex-1">Oficina Virtual IA</span><span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-cc-amber/20 text-cc-amber">IA</span></button>
       </nav>
-      <div class="m-4 mt-2 rounded-xl bg-cc-blueSoft p-4">
-        <p class="text-xs font-semibold text-cc-navy flex items-center gap-2"><i class="fa-solid fa-headset text-cc-primary"></i> ¿Necesitas ayuda?</p>
-        <p class="text-[11px] text-cc-g600 mt-1 leading-snug">Nuestro equipo te acompaña en la gestión de tu inmobiliaria.</p>
-      </div>
     </aside>
 
     <div id="backdrop" class="fixed inset-0 top-16 bg-black/40 z-10 hidden lg:hidden"></div>
 
     <main class="flex-1 min-w-0 px-4 md:px-6 py-6">
       <section id="view-publicaciones" class="view active"></section>
-      <section id="view-contactos" class="view"></section>
+      <section id="view-leads" class="view"></section>
       <section id="view-reportes" class="view"></section>
       <section id="view-oficina-ia" class="view"></section>
       <section id="view-productos" class="view"></section>
       <section id="view-perfil" class="view"></section>
+      <section id="view-facturacion" class="view"></section>
     </main>
   </div>
+
+  <button class="hidden lg:flex fixed right-0 top-1/2 -translate-y-1/2 z-20 bg-cc-blueSoft text-cc-primary text-xs font-semibold px-2 py-3 rounded-l-lg shadow items-center">
+    <span class="dudas-tab">Resuelve tus dudas</span>
+  </button>
 
   <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
   <script src="app-oficina-virtual.js"></script>
