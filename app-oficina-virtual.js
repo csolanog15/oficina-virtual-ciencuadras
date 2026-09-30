@@ -479,37 +479,33 @@
   ];
 
   /* Módulo 2: Lead 360
-     - ingreso: ingreso mensual estimado del lead (mock; en real vendría de bancarización/scoring).
      - Arriendo -> canon máximo ≈ 30% del ingreso.
      - Venta    -> capacidad total = crédito (cuota 30% ingreso, 12% E.A., 20 años) + cuota inicial estimada.
-     - hist: historial de interacciones (timeline). En real vendría del backend (eventos GA4 + CRM). */
+     - capMin/capMax: rango de capacidad total de crédito (mock; en real de bancarización/scoring).
+     - ultLead: fecha/hora del último lead. hist: últimos inmuebles donde dejó lead (URL). */
   const LEADS = [
-    { id: 'L-1042', nombre: 'Laura Gómez', prob: 'Alta', av: 'LG', tel: '573001234567', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 2, ingreso: 8500000, inicial: 0, val: true, cred: 2, ult: 'hace 2 h', zonas: ['Cedritos','Contador','Toberín'], comp: 'Comparó 3 aptos de 2 hab en la última semana; foco en zonas del norte.',
+    { id: 'L-1042', nombre: 'Laura Gómez', prob: 'Alta', av: 'LG', tel: '573001234567', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 2, ingreso: 8500000, inicial: 0, val: true, capMin: 150000000, capMax: 180000000, ultLead: 'Hoy 10:24 a. m.', zonas: ['Cedritos','Contador','Toberín'], comp: 'Comparó 3 aptos de 2 hab en la última semana; foco en zonas del norte.',
       hist: [
-        { t: 'hace 2 h', ico: 'fa-file-lines', d: 'Dejó formulario en Apto · Cedritos (CC-84213)' },
-        { t: 'hace 5 h', ico: 'fa-scale-balanced', d: 'Comparó 3 apartamentos de 2 habitaciones' },
-        { t: 'ayer', ico: 'fa-calculator', d: 'Simuló canon de arriendo por $2.500.000' },
-        { t: 'hace 3 días', ico: 'fa-magnifying-glass', d: 'Buscó "2 habitaciones Cedritos con parqueadero"' },
-        { t: 'hace 6 días', ico: 'fa-heart', d: 'Guardó 2 inmuebles en Contador' }
+        { code: 'CC-84213', d: 'Apto · Cedritos, Bogotá', t: 'Hoy 10:24 a. m.', url: 'https://www.ciencuadras.com/inmueble/CC-84213' },
+        { code: 'CC-90011', d: 'Apto · Contador, Bogotá', t: 'Ayer 6:12 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90011' },
+        { code: 'CC-90031', d: 'Apto · Toberín, Bogotá', t: '26/09 3:40 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90031' },
+        { code: 'CC-90014', d: 'Apto · Cedritos, Bogotá', t: '24/09 9:05 a. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90014' }
       ] },
-    { id: 'L-1043', nombre: 'Andrés Restrepo', prob: 'Media', av: 'AR', tel: '573109876543', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 14000000, inicial: 120000000, val: true, cred: 1, ult: 'ayer', zonas: ['Envigado','El Poblado'], comp: 'Revisó casas en El Poblado pero abandonó por precio. Sensible al valor.',
+    { id: 'L-1043', nombre: 'Andrés Restrepo', prob: 'Media', av: 'AR', tel: '573109876543', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 14000000, inicial: 120000000, val: true, capMin: 520000000, capMax: 560000000, ultLead: 'Ayer 4:15 p. m.', zonas: ['Envigado','El Poblado'], comp: 'Revisó casas en El Poblado pero abandonó por precio. Sensible al valor.',
       hist: [
-        { t: 'ayer', ico: 'fa-eye', d: 'Vio 4 casas en El Poblado, abandonó por precio' },
-        { t: 'hace 2 días', ico: 'fa-calculator', d: 'Simuló crédito hipotecario por $500.000.000' },
-        { t: 'hace 4 días', ico: 'fa-magnifying-glass', d: 'Buscó "casa 3 habitaciones Envigado"' },
-        { t: 'hace 8 días', ico: 'fa-file-lines', d: 'Dejó formulario en Casa · Envigado (CC-83771)' }
+        { code: 'CC-83771', d: 'Casa · Envigado, Medellín', t: 'Ayer 4:15 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-83771' },
+        { code: 'CC-90108', d: 'Apto · El Poblado, Medellín', t: '27/09 11:30 a. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90108' },
+        { code: 'CC-90105', d: 'Casa · Envigado, Medellín', t: '23/09 5:48 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90105' }
       ] },
-    { id: 'L-1044', nombre: 'Valentina Ríos', prob: 'Alta', av: 'VR', tel: '573155551212', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 12000000, inicial: 90000000, val: true, cred: 3, ult: 'hace 40 min', zonas: ['Laureles','Estadio'], comp: 'Alta intención: descargó 2 fichas y solicitó info de crédito hipotecario.',
+    { id: 'L-1044', nombre: 'Valentina Ríos', prob: 'Alta', av: 'VR', tel: '573155551212', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 12000000, inicial: 90000000, val: true, capMin: 380000000, capMax: 420000000, ultLead: 'Hoy 9:05 a. m.', zonas: ['Laureles','Estadio'], comp: 'Alta intención: descargó 2 fichas y solicitó info de crédito hipotecario.',
       hist: [
-        { t: 'hace 40 min', ico: 'fa-building-columns', d: 'Solicitó info de crédito hipotecario' },
-        { t: 'hace 2 h', ico: 'fa-download', d: 'Descargó 2 fichas de aptos en Laureles' },
-        { t: 'hace 1 día', ico: 'fa-eye', d: 'Vio 5 apartamentos en Laureles y Estadio' },
-        { t: 'hace 3 días', ico: 'fa-heart', d: 'Guardó Apto · Laureles (CC-84090)' }
+        { code: 'CC-90201', d: 'Apto · Laureles, Medellín', t: 'Hoy 9:05 a. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90201' },
+        { code: 'CC-84090', d: 'Apto · Laureles, Medellín', t: 'Ayer 7:22 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-84090' },
+        { code: 'CC-90205', d: 'Apto · Estadio, Medellín', t: '25/09 2:10 p. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90205' }
       ] },
-    { id: 'L-1045', nombre: 'Carlos Méndez', prob: 'Baja', av: 'CM', tel: '573201119988', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 1, ingreso: 4800000, inicial: 0, val: false, cred: 0, ult: 'hace 5 días', zonas: ['Chapinero'], comp: 'Una sola visita, sin presupuesto validado. Requiere calificación.',
+    { id: 'L-1045', nombre: 'Carlos Méndez', prob: 'Baja', av: 'CM', tel: '573201119988', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 1, ingreso: 4800000, inicial: 0, val: false, capMin: 80000000, capMax: 100000000, ultLead: '25/09 8:40 a. m.', zonas: ['Chapinero'], comp: 'Una sola visita, sin presupuesto validado. Requiere calificación.',
       hist: [
-        { t: 'hace 5 días', ico: 'fa-eye', d: 'Vio 1 apartaestudio en Chapinero' },
-        { t: 'hace 5 días', ico: 'fa-magnifying-glass', d: 'Buscó "apartaestudio Chapinero económico"' }
+        { code: 'CC-90022', d: 'Apartaestudio · Chapinero, Bogotá', t: '25/09 8:40 a. m.', url: 'https://www.ciencuadras.com/inmueble/CC-90022' }
       ] }
   ];
   const leadNav = createStore({ sel: LEADS[0].id });
@@ -557,7 +553,7 @@
       ? `<div class="rounded-lg bg-cc-blueSoft border border-cc-blue/30 p-3 col-span-2"><p class="text-[10px] uppercase text-cc-primary font-semibold"><i class="fa-solid fa-key mr-1"></i>Canon máximo (arriendo)</p><p class="text-lg font-extrabold text-cc-navy">${fmtCOP(f.canon)}<span class="text-[11px] font-medium text-cc-g500">/mes</span></p><p class="text-[10px] text-cc-g500">Estimado en 30% del ingreso reportado</p></div>`
       : `<div class="rounded-lg bg-cc-blueSoft border border-cc-blue/30 p-3 col-span-2"><p class="text-[10px] uppercase text-cc-primary font-semibold"><i class="fa-solid fa-building-columns mr-1"></i>Capacidad total de compra</p><p class="text-lg font-extrabold text-cc-navy">${fmtCOP(f.capacidad)}</p><p class="text-[10px] text-cc-g500">Crédito ${fmtCOP(f.credito)} + inicial ${fmtCOP(f.inicial)} · cuota estimada ${fmtCOP(f.cuotaMax)}/mes</p></div>`;
 
-    const timeline = l.hist.map((h, i) => `<div class="flex gap-3 ${i < l.hist.length - 1 ? 'pb-3' : ''}"><div class="flex flex-col items-center"><span class="w-6 h-6 rounded-full bg-cc-blueSoft text-cc-primary flex items-center justify-center text-[10px]"><i class="fa-solid ${h.ico}"></i></span>${i < l.hist.length - 1 ? '<span class="w-px flex-1 bg-cc-g200 mt-1"></span>' : ''}</div><div class="flex-1 -mt-0.5"><p class="text-[13px] text-cc-navy leading-snug">${h.d}</p><p class="text-[10px] text-cc-g400">${h.t}</p></div></div>`).join('');
+    const histLeads = l.hist.slice(0, 5).map((h) => `<a href="${h.url}" target="_blank" rel="noopener" class="flex items-start gap-2 py-2 border-b border-cc-g100 last:border-0 group"><i class="fa-solid fa-link text-cc-primary text-[11px] mt-1"></i><div class="min-w-0 flex-1"><p class="text-[12px] text-cc-primary group-hover:underline truncate">${h.url}</p><p class="text-[10px] text-cc-g400">${h.d} · ${h.t}</p></div></a>`).join('');
 
     const sugCards = sug.length ? sug.map((p) => `<div class="bg-white rounded-lg p-3 flex items-center justify-between gap-3"><div class="min-w-0"><p class="text-sm font-semibold text-cc-navy truncate">${p.tipo} ${p.hab} hab · ${p.zona}</p><p class="text-[11px] text-cc-g500 truncate">${p.nota} · <span class="text-cc-g600">${p.code}</span></p><div class="flex gap-1.5 mt-1">${p.enZona?'<span class="text-[9px] px-1.5 py-0.5 rounded-full bg-cc-green/15 text-cc-green700">zona que busca</span>':''}${p.enPresu?'<span class="text-[9px] px-1.5 py-0.5 rounded-full bg-cc-blue/15 text-cc-p700">en presupuesto</span>':''}</div></div><div class="text-right flex-shrink-0"><p class="text-sm font-bold text-cc-navy">${fmtCOP(p.valor)}${l.tipo==='Arriendo'?'<span class="text-[10px] font-medium text-cc-g500">/mes</span>':''}</p><p class="text-[10px] font-semibold text-cc-amber">${p.match}% match</p></div></div>`).join('')
       : '<div class="bg-white rounded-lg p-3 text-center text-xs text-cc-g500">Sin coincidencias en catálogo para su zona y presupuesto actual.</div>';
@@ -565,18 +561,17 @@
     return `<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <div class="lg:col-span-1"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Leads recibidos</h3><span class="text-[11px] text-cc-g500">${LEADS.length} activos</span></div><div class="space-y-2">${list}</div></div>
       <div class="lg:col-span-2"><div class="card bg-white rounded-xl border border-cc-g200 p-6">
-        <div class="flex items-center gap-4 mb-5"><div class="w-14 h-14 rounded-full bg-cc-primary text-white flex items-center justify-center text-lg font-bold">${l.av}</div><div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-g600">${l.tipo}</span></div><p class="text-xs text-cc-g500">${l.id} · Interesado en ${inmLabel} · Últ. actividad ${l.ult}</p></div></div>
+        <div class="flex items-center gap-4 mb-5"><div class="w-14 h-14 rounded-full bg-cc-primary text-white flex items-center justify-center text-lg font-bold">${l.av}</div><div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-g600">${l.tipo}</span></div><p class="text-xs text-cc-g500">${l.id} · Interesado en ${inmLabel} · Último lead ${l.ultLead}</p></div></div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           ${finBlock}
-          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Créditos simulados</p><p class="text-sm font-bold text-cc-navy">${l.cred}</p><p class="text-[10px] ${l.val ? 'text-cc-green700' : 'text-cc-red'}">${l.val ? '✓ validado' : '⚠ sin validar'}</p></div>
-          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Ingreso estimado</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(l.ingreso)}</p><p class="text-[10px] text-cc-g500">/mes</p></div>
+          <div class="rounded-lg bg-cc-zpBg p-3 col-span-2"><p class="text-[10px] uppercase text-cc-g500">Capacidad total de crédito</p><p class="text-sm font-bold text-cc-navy">Entre ${fmtCOP(l.capMin)} y ${fmtCOP(l.capMax)}</p><p class="text-[10px] ${l.val ? 'text-cc-green700' : 'text-cc-red'}">${l.val ? '✓ validado' : '⚠ sin validar'}</p></div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div class="rounded-lg border border-cc-g200 p-4">
-            <p class="text-[10px] uppercase text-cc-g500 mb-3"><i class="fa-regular fa-clock mr-1"></i>Historial del lead</p>
-            ${timeline}
+            <p class="text-[10px] uppercase text-cc-g500 mb-1"><i class="fa-regular fa-rectangle-list mr-1"></i>Últimos inmuebles donde dejó lead</p>
+            ${histLeads}
           </div>
           <div class="space-y-4">
             <div class="rounded-lg border border-cc-g200 p-4"><p class="text-[10px] uppercase text-cc-g500 mb-1"><i class="fa-solid fa-location-dot mr-1 text-cc-primary"></i>Zonas donde busca</p><div class="flex flex-wrap gap-1.5">${l.zonas.map((z)=>`<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-navy font-semibold">${z}</span>`).join('')}</div></div>
