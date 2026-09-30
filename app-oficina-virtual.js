@@ -325,10 +325,6 @@
 
   /* Módulo 1: Optimizador */
   const optim = createStore({ titulo: 'Apartamento en arriendo — Cedritos, Bogotá', descripcion: 'Apartamento de 2 habitaciones, 1 baño, cocina integral. Zona tranquila y bien ubicada cerca de transporte.', precio: 2400000, zMin: 2100000, zMax: 3200000, fotos: false, descIA: false, periodo: 7, attrs: { parqueadero: false, admin: false, gym: false, pet: false, deposito: false } });
-  /* Métricas de comportamiento del inmueble (mock).
-     En produccion provienen del backend que consulta la GA4 Data API
-     (eventos view_item, generate_lead, add_to_wishlist) por item_id,
-     nunca desde el navegador. Series diarias de los ultimos 30 dias. */
   const VIEWS_30 = [9,7,11,13,10,8,12,14,11,9,15,12,16,13,11,10,17,14,13,15,12,11,18,16,14,19,17,15,21,18];
   const LEADS_30 = [0,0,1,0,1,0,0,1,0,0,1,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0];
   const FAVS_30  = [0,1,0,1,0,0,1,0,1,1,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,1,0];
@@ -470,31 +466,128 @@
     document.querySelectorAll('.o-attr').forEach((c) => c.addEventListener('change', (e) => { const k = e.target.getAttribute('data-attr'); optim.set((st) => ({ attrs: { ...st.attrs, [k]: e.target.checked } })); }));
   }
 
-  /* Módulo 2: Lead 360 */
+  // Catálogo de inmuebles para sugerencias (en producción vendría del backend / Data Operativa).
+  const CATALOGO = [
+    { code: 'CC-90011', tipo: 'Apartamento', tx: 'Arriendo', ciudad: 'Bogotá', zona: 'Contador', hab: 2, valor: 2450000, nota: 'con parqueadero y administración' },
+    { code: 'CC-90014', tipo: 'Apartamento', tx: 'Arriendo', ciudad: 'Bogotá', zona: 'Cedritos', hab: 2, valor: 2700000, nota: 'remodelado, iluminado' },
+    { code: 'CC-90022', tipo: 'Apartaestudio', tx: 'Arriendo', ciudad: 'Bogotá', zona: 'Chapinero', hab: 1, valor: 1720000, nota: 'con póliza de arriendo incluida' },
+    { code: 'CC-90031', tipo: 'Apartamento', tx: 'Arriendo', ciudad: 'Bogotá', zona: 'Toberín', hab: 2, valor: 2300000, nota: 'cerca a transporte' },
+    { code: 'CC-90105', tipo: 'Casa', tx: 'Venta', ciudad: 'Medellín', zona: 'Envigado', hab: 3, valor: 585000000, nota: 'opción compra de cartera' },
+    { code: 'CC-90108', tipo: 'Apartamento', tx: 'Venta', ciudad: 'Medellín', zona: 'El Poblado', hab: 3, valor: 640000000, nota: 'con valorización alta' },
+    { code: 'CC-90201', tipo: 'Apartamento', tx: 'Venta', ciudad: 'Medellín', zona: 'Laureles', hab: 3, valor: 335000000, nota: 'pre-aprobado Davivienda' },
+    { code: 'CC-90205', tipo: 'Apartamento', tx: 'Venta', ciudad: 'Medellín', zona: 'Estadio', hab: 2, valor: 298000000, nota: 'listo para habitar' }
+  ];
+
+  /* Módulo 2: Lead 360
+     - ingreso: ingreso mensual estimado del lead (mock; en real vendría de bancarización/scoring).
+     - Arriendo -> canon máximo ≈ 30% del ingreso.
+     - Venta    -> capacidad total = crédito (cuota 30% ingreso, 12% E.A., 20 años) + cuota inicial estimada.
+     - hist: historial de interacciones (timeline). En real vendría del backend (eventos GA4 + CRM). */
   const LEADS = [
-    { id: 'L-1042', nombre: 'Laura Gómez', prob: 'Alta', av: 'LG', inm: 'Apto arriendo · Cedritos, Bogotá', tel: '573001234567', pres: 2600000, val: true, zonas: ['Cedritos','Contador','Toberín'], cred: 2, ult: 'hace 2 h', tipo: 'Arriendo', comp: 'Simuló crédito y comparó 3 aptos de 2 hab en la última semana.', nba: { inm: 'Apto 2 hab · Contador — 2.500.000/mes (con parqueadero)', pitch: 'Hola Laura, vi que buscas 2 habitaciones en Cedritos. Tengo uno en Contador dentro de tu presupuesto, con parqueadero y administración incluida. ¿Te agendo una visita mañana?' } },
-    { id: 'L-1043', nombre: 'Andrés Restrepo', prob: 'Media', av: 'AR', inm: 'Casa venta · Envigado, Medellín', tel: '573109876543', pres: 620000000, val: true, zonas: ['Envigado','El Poblado'], cred: 1, ult: 'ayer', tipo: 'Venta', comp: 'Revisó casas en El Poblado pero abandonó por precio. Sensible al valor.', nba: { inm: 'Casa 3 hab · Envigado — 590.000.000 (opción compra de cartera)', pitch: 'Hola Andrés, encontré una casa en Envigado por debajo de tu tope. Además podemos evaluar compra de cartera para bajar tu cuota. ¿Hablamos hoy?' } },
-    { id: 'L-1044', nombre: 'Valentina Ríos', prob: 'Alta', av: 'VR', inm: 'Apto venta · Laureles, Medellín', tel: '573155551212', pres: 340000000, val: true, zonas: ['Laureles','Estadio'], cred: 3, ult: 'hace 40 min', tipo: 'Venta', comp: 'Alta intención: descargó 2 fichas y solicitó info de crédito hipotecario.', nba: { inm: 'Apto 3 hab · Laureles — 335.000.000 (pre-aprobado Davivienda)', pitch: 'Hola Valentina, tengo el apto en Laureles que buscabas y ya tienes pre-aprobación Davivienda. Podemos dejar la oferta formal lista hoy mismo. ¿Te llamo?' } },
-    { id: 'L-1045', nombre: 'Carlos Méndez', prob: 'Baja', av: 'CM', inm: 'Apto arriendo · Chapinero, Bogotá', tel: '573201119988', pres: 1800000, val: false, zonas: ['Chapinero'], cred: 0, ult: 'hace 5 días', tipo: 'Arriendo', comp: 'Una sola visita, sin presupuesto validado. Requiere calificación.', nba: { inm: 'Apto 1 hab · Chapinero — 1.750.000/mes (con póliza de arriendo)', pitch: 'Hola Carlos, ¿sigues buscando en Chapinero? Tengo una opción dentro de tu rango con póliza de arrendamiento incluida para agilizar el proceso. ¿Te comparto la ficha?' } }
+    { id: 'L-1042', nombre: 'Laura Gómez', prob: 'Alta', av: 'LG', tel: '573001234567', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 2, ingreso: 8500000, inicial: 0, val: true, cred: 2, ult: 'hace 2 h', zonas: ['Cedritos','Contador','Toberín'], comp: 'Comparó 3 aptos de 2 hab en la última semana; foco en zonas del norte.',
+      hist: [
+        { t: 'hace 2 h', ico: 'fa-file-lines', d: 'Dejó formulario en Apto · Cedritos (CC-84213)' },
+        { t: 'hace 5 h', ico: 'fa-scale-balanced', d: 'Comparó 3 apartamentos de 2 habitaciones' },
+        { t: 'ayer', ico: 'fa-calculator', d: 'Simuló canon de arriendo por $2.500.000' },
+        { t: 'hace 3 días', ico: 'fa-magnifying-glass', d: 'Buscó "2 habitaciones Cedritos con parqueadero"' },
+        { t: 'hace 6 días', ico: 'fa-heart', d: 'Guardó 2 inmuebles en Contador' }
+      ] },
+    { id: 'L-1043', nombre: 'Andrés Restrepo', prob: 'Media', av: 'AR', tel: '573109876543', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 14000000, inicial: 120000000, val: true, cred: 1, ult: 'ayer', zonas: ['Envigado','El Poblado'], comp: 'Revisó casas en El Poblado pero abandonó por precio. Sensible al valor.',
+      hist: [
+        { t: 'ayer', ico: 'fa-eye', d: 'Vio 4 casas en El Poblado, abandonó por precio' },
+        { t: 'hace 2 días', ico: 'fa-calculator', d: 'Simuló crédito hipotecario por $500.000.000' },
+        { t: 'hace 4 días', ico: 'fa-magnifying-glass', d: 'Buscó "casa 3 habitaciones Envigado"' },
+        { t: 'hace 8 días', ico: 'fa-file-lines', d: 'Dejó formulario en Casa · Envigado (CC-83771)' }
+      ] },
+    { id: 'L-1044', nombre: 'Valentina Ríos', prob: 'Alta', av: 'VR', tel: '573155551212', tipo: 'Venta', ciudad: 'Medellín', hab: 3, ingreso: 12000000, inicial: 90000000, val: true, cred: 3, ult: 'hace 40 min', zonas: ['Laureles','Estadio'], comp: 'Alta intención: descargó 2 fichas y solicitó info de crédito hipotecario.',
+      hist: [
+        { t: 'hace 40 min', ico: 'fa-building-columns', d: 'Solicitó info de crédito hipotecario' },
+        { t: 'hace 2 h', ico: 'fa-download', d: 'Descargó 2 fichas de aptos en Laureles' },
+        { t: 'hace 1 día', ico: 'fa-eye', d: 'Vio 5 apartamentos en Laureles y Estadio' },
+        { t: 'hace 3 días', ico: 'fa-heart', d: 'Guardó Apto · Laureles (CC-84090)' }
+      ] },
+    { id: 'L-1045', nombre: 'Carlos Méndez', prob: 'Baja', av: 'CM', tel: '573201119988', tipo: 'Arriendo', ciudad: 'Bogotá', hab: 1, ingreso: 4800000, inicial: 0, val: false, cred: 0, ult: 'hace 5 días', zonas: ['Chapinero'], comp: 'Una sola visita, sin presupuesto validado. Requiere calificación.',
+      hist: [
+        { t: 'hace 5 días', ico: 'fa-eye', d: 'Vio 1 apartaestudio en Chapinero' },
+        { t: 'hace 5 días', ico: 'fa-magnifying-glass', d: 'Buscó "apartaestudio Chapinero económico"' }
+      ] }
   ];
   const leadNav = createStore({ sel: LEADS[0].id });
+
+  // Finanzas derivadas del ingreso (mock explicable).
+  function finanzas(l) {
+    const capacidadCuota = Math.round(l.ingreso * 0.30);
+    if (l.tipo === 'Arriendo') {
+      return { modo: 'arriendo', canon: capacidadCuota };
+    }
+    const im = Math.pow(1 + 12 / 100, 1 / 12) - 1; const n = 20 * 12;
+    const credito = Math.round((capacidadCuota * (1 - Math.pow(1 + im, -n))) / im);
+    return { modo: 'venta', cuotaMax: capacidadCuota, credito, inicial: l.inicial, capacidad: credito + l.inicial };
+  }
+  function sugerencias(l) {
+    const f = finanzas(l);
+    const tope = f.modo === 'arriendo' ? f.canon : f.capacidad;
+    return CATALOGO
+      .filter((p) => p.tx === l.tipo && p.ciudad === l.ciudad)
+      .map((p) => {
+        const enZona = l.zonas.includes(p.zona);
+        const enPresu = p.valor <= tope * 1.05;
+        let match = 0; if (enZona) match += 55; if (enPresu) match += 35; if (p.hab === l.hab) match += 10;
+        return { ...p, match, enZona, enPresu };
+      })
+      .filter((p) => p.match >= 45)
+      .sort((a, b) => b.match - a.match)
+      .slice(0, 3);
+  }
+  function pitchDe(l, sug) {
+    const f = finanzas(l);
+    if (!sug.length) return `Hola ${l.nombre.split(' ')[0]}, sigo atento a tu búsqueda en ${l.zonas[0]}. Apenas ingrese una opción dentro de tu presupuesto te la comparto de primero.`;
+    const top = sug[0];
+    const presu = f.modo === 'arriendo' ? `canon hasta ${fmtCOP(f.canon)}` : `capacidad de ${fmtCOP(f.capacidad)}`;
+    return `Hola ${l.nombre.split(' ')[0]}, según lo que has visto en ${l.zonas.slice(0,2).join(' y ')} y tu ${presu}, tengo un ${top.tipo.toLowerCase()} de ${top.hab} hab en ${top.zona} (${top.nota}) por ${fmtCOP(top.valor)}${l.tipo==='Arriendo'?'/mes':''}. ¿Te agendo una visita?`;
+  }
+
   function renderLeads() {
     const s = leadNav.get(); const l = LEADS.find((x) => x.id === s.sel);
-    const list = LEADS.map((x) => `<button data-lead="${x.id}" class="w-full text-left px-4 py-3 rounded-lg border transition flex items-center gap-3 ${x.id === s.sel ? 'border-cc-primary bg-cc-blueSoft' : 'border-cc-g200 bg-white hover:border-cc-primary/50'}"><div class="w-9 h-9 rounded-full bg-cc-primary text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">${x.av}</div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-sm font-semibold text-cc-navy truncate">${x.nombre}</span>${probBadge(x.prob)}</div><p class="text-[11px] text-cc-g500 truncate">${x.inm}</p></div></button>`).join('');
+    const f = finanzas(l); const sug = sugerencias(l); const pitch = pitchDe(l, sug);
+    const inmLabel = `${l.hab===1?'Apto/estudio':'Inmueble'} ${l.tipo.toLowerCase()} · ${l.zonas[0]}, ${l.ciudad}`;
+    const list = LEADS.map((x) => `<button data-lead="${x.id}" class="w-full text-left px-4 py-3 rounded-lg border transition flex items-center gap-3 ${x.id === s.sel ? 'border-cc-primary bg-cc-blueSoft' : 'border-cc-g200 bg-white hover:border-cc-primary/50'}"><div class="w-9 h-9 rounded-full bg-cc-primary text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">${x.av}</div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-sm font-semibold text-cc-navy truncate">${x.nombre}</span>${probBadge(x.prob)}</div><p class="text-[11px] text-cc-g500 truncate">${x.tipo} · ${x.zonas[0]}, ${x.ciudad}</p></div></button>`).join('');
+
+    const finBlock = f.modo === 'arriendo'
+      ? `<div class="rounded-lg bg-cc-blueSoft border border-cc-blue/30 p-3 col-span-2"><p class="text-[10px] uppercase text-cc-primary font-semibold"><i class="fa-solid fa-key mr-1"></i>Canon máximo (arriendo)</p><p class="text-lg font-extrabold text-cc-navy">${fmtCOP(f.canon)}<span class="text-[11px] font-medium text-cc-g500">/mes</span></p><p class="text-[10px] text-cc-g500">Estimado en 30% del ingreso reportado</p></div>`
+      : `<div class="rounded-lg bg-cc-blueSoft border border-cc-blue/30 p-3 col-span-2"><p class="text-[10px] uppercase text-cc-primary font-semibold"><i class="fa-solid fa-building-columns mr-1"></i>Capacidad total de compra</p><p class="text-lg font-extrabold text-cc-navy">${fmtCOP(f.capacidad)}</p><p class="text-[10px] text-cc-g500">Crédito ${fmtCOP(f.credito)} + inicial ${fmtCOP(f.inicial)} · cuota estimada ${fmtCOP(f.cuotaMax)}/mes</p></div>`;
+
+    const timeline = l.hist.map((h, i) => `<div class="flex gap-3 ${i < l.hist.length - 1 ? 'pb-3' : ''}"><div class="flex flex-col items-center"><span class="w-6 h-6 rounded-full bg-cc-blueSoft text-cc-primary flex items-center justify-center text-[10px]"><i class="fa-solid ${h.ico}"></i></span>${i < l.hist.length - 1 ? '<span class="w-px flex-1 bg-cc-g200 mt-1"></span>' : ''}</div><div class="flex-1 -mt-0.5"><p class="text-[13px] text-cc-navy leading-snug">${h.d}</p><p class="text-[10px] text-cc-g400">${h.t}</p></div></div>`).join('');
+
+    const sugCards = sug.length ? sug.map((p) => `<div class="bg-white rounded-lg p-3 flex items-center justify-between gap-3"><div class="min-w-0"><p class="text-sm font-semibold text-cc-navy truncate">${p.tipo} ${p.hab} hab · ${p.zona}</p><p class="text-[11px] text-cc-g500 truncate">${p.nota} · <span class="text-cc-g600">${p.code}</span></p><div class="flex gap-1.5 mt-1">${p.enZona?'<span class="text-[9px] px-1.5 py-0.5 rounded-full bg-cc-green/15 text-cc-green700">zona que busca</span>':''}${p.enPresu?'<span class="text-[9px] px-1.5 py-0.5 rounded-full bg-cc-blue/15 text-cc-p700">en presupuesto</span>':''}</div></div><div class="text-right flex-shrink-0"><p class="text-sm font-bold text-cc-navy">${fmtCOP(p.valor)}${l.tipo==='Arriendo'?'<span class="text-[10px] font-medium text-cc-g500">/mes</span>':''}</p><p class="text-[10px] font-semibold text-cc-amber">${p.match}% match</p></div></div>`).join('')
+      : '<div class="bg-white rounded-lg p-3 text-center text-xs text-cc-g500">Sin coincidencias en catálogo para su zona y presupuesto actual.</div>';
+
     return `<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <div class="lg:col-span-1"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-cc-navy">Leads recibidos</h3><span class="text-[11px] text-cc-g500">${LEADS.length} activos</span></div><div class="space-y-2">${list}</div></div>
       <div class="lg:col-span-2"><div class="card bg-white rounded-xl border border-cc-g200 p-6">
-        <div class="flex items-center gap-4 mb-5"><div class="w-14 h-14 rounded-full bg-cc-primary text-white flex items-center justify-center text-lg font-bold">${l.av}</div><div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-g600">${l.tipo}</span></div><p class="text-xs text-cc-g500">${l.id} · Interesado en ${l.inm} · Últ. actividad ${l.ult}</p></div></div>
+        <div class="flex items-center gap-4 mb-5"><div class="w-14 h-14 rounded-full bg-cc-primary text-white flex items-center justify-center text-lg font-bold">${l.av}</div><div class="flex-1"><div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold text-cc-navy">${l.nombre}</h3>${probBadge(l.prob)}<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-g600">${l.tipo}</span></div><p class="text-xs text-cc-g500">${l.id} · Interesado en ${inmLabel} · Últ. actividad ${l.ult}</p></div></div>
+
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Presupuesto</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(l.pres)}</p><p class="text-[10px] ${l.val ? 'text-cc-green700' : 'text-cc-red'}">${l.val ? '✓ validado' : '⚠ sin validar'}</p></div>
-          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Créditos simulados</p><p class="text-sm font-bold text-cc-navy">${l.cred}</p><p class="text-[10px] text-cc-g500">previos</p></div>
-          <div class="rounded-lg bg-cc-zpBg p-3 col-span-2"><p class="text-[10px] uppercase text-cc-g500">Zonas exploradas</p><p class="text-sm font-semibold text-cc-navy leading-tight">${l.zonas.join(' · ')}</p></div>
+          ${finBlock}
+          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Créditos simulados</p><p class="text-sm font-bold text-cc-navy">${l.cred}</p><p class="text-[10px] ${l.val ? 'text-cc-green700' : 'text-cc-red'}">${l.val ? '✓ validado' : '⚠ sin validar'}</p></div>
+          <div class="rounded-lg bg-cc-zpBg p-3"><p class="text-[10px] uppercase text-cc-g500">Ingreso estimado</p><p class="text-sm font-bold text-cc-navy">${fmtCOP(l.ingreso)}</p><p class="text-[10px] text-cc-g500">/mes</p></div>
         </div>
-        <div class="rounded-lg border border-cc-g200 p-3 mb-5"><p class="text-[10px] uppercase text-cc-g500 mb-1">Comportamiento detectado</p><p class="text-sm text-cc-g700">${l.comp}</p></div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div class="rounded-lg border border-cc-g200 p-4">
+            <p class="text-[10px] uppercase text-cc-g500 mb-3"><i class="fa-regular fa-clock mr-1"></i>Historial del lead</p>
+            ${timeline}
+          </div>
+          <div class="space-y-4">
+            <div class="rounded-lg border border-cc-g200 p-4"><p class="text-[10px] uppercase text-cc-g500 mb-1"><i class="fa-solid fa-location-dot mr-1 text-cc-primary"></i>Zonas donde busca</p><div class="flex flex-wrap gap-1.5">${l.zonas.map((z)=>`<span class="text-[11px] px-2 py-0.5 rounded-full bg-cc-g100 text-cc-navy font-semibold">${z}</span>`).join('')}</div></div>
+            <div class="rounded-lg border border-cc-g200 p-4"><p class="text-[10px] uppercase text-cc-g500 mb-1">Comportamiento detectado</p><p class="text-sm text-cc-g700 leading-snug">${l.comp}</p></div>
+          </div>
+        </div>
+
         <div class="rounded-xl border-2 border-cc-amber bg-cc-amber/10 p-5">
-          <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-wand-magic-sparkles text-cc-amber"></i><h4 class="text-sm font-bold text-cc-navy">Siguiente Mejor Acción (IA)</h4></div>
-          <div class="bg-white rounded-lg p-3 mb-3"><p class="text-[10px] uppercase text-cc-g500">Inmueble alternativo sugerido</p><p class="text-sm font-semibold text-cc-navy">${l.nba.inm}</p></div>
-          <div class="bg-white rounded-lg p-3 mb-4"><p class="text-[10px] uppercase text-cc-g500 mb-1">Script de abordaje personalizado</p><p class="text-sm text-cc-g700 italic">"${l.nba.pitch}"</p></div>
+          <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-wand-magic-sparkles text-cc-amber"></i><h4 class="text-sm font-bold text-cc-navy">Inmuebles sugeridos por IA</h4><span class="text-[10px] text-cc-g500">según zona + ${f.modo==='arriendo'?'canon':'capacidad'}</span></div>
+          <div class="space-y-2 mb-4">${sugCards}</div>
+          <div class="bg-white rounded-lg p-3 mb-4"><p class="text-[10px] uppercase text-cc-g500 mb-1">Script de abordaje personalizado</p><p id="lPitch" class="text-sm text-cc-g700 italic">"${pitch}"</p></div>
           <div class="flex flex-wrap gap-2"><button id="lWa" class="text-sm font-semibold px-4 py-2.5 rounded-lg bg-cc-green700 hover:brightness-110 text-white flex items-center gap-2"><i class="fa-brands fa-whatsapp"></i> Contactar por WhatsApp</button><button id="lCopy" class="text-sm font-semibold px-4 py-2.5 rounded-lg border border-cc-g200 text-cc-navy hover:bg-cc-g100 flex items-center gap-2"><i class="fa-regular fa-copy"></i> Copiar script</button></div>
         </div>
       </div></div>
@@ -502,9 +595,10 @@
   }
   function bindLeads() {
     const l = LEADS.find((x) => x.id === leadNav.get().sel);
+    const pitch = pitchDe(l, sugerencias(l));
     document.querySelectorAll('[data-lead]').forEach((b) => b.addEventListener('click', () => leadNav.set({ sel: b.getAttribute('data-lead') })));
-    const cp = el('lCopy'); if (cp) cp.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(l.nba.pitch).catch(()=>{}); toast('Script copiado al portapapeles', 'success'); });
-    const wa = el('lWa'); if (wa) wa.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(l.nba.pitch).catch(()=>{}); window.open(`https://wa.me/${l.tel}?text=${encodeURIComponent(l.nba.pitch)}`, '_blank', 'noopener'); toast('Abriendo WhatsApp · script copiado', 'success'); });
+    const cp = el('lCopy'); if (cp) cp.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(pitch).catch(()=>{}); toast('Script copiado al portapapeles', 'success'); });
+    const wa = el('lWa'); if (wa) wa.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(pitch).catch(()=>{}); window.open(`https://wa.me/${l.tel}?text=${encodeURIComponent(pitch)}`, '_blank', 'noopener'); toast('Abriendo WhatsApp · script copiado', 'success'); });
   }
 
   const TABS = [['optimizador', 'Optimizador de Anuncio IA', 'fa-wand-magic-sparkles'], ['leads', 'Lead 360°', 'fa-user-magnifying-glass']];
