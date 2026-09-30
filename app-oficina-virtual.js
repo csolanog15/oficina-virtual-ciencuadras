@@ -601,7 +601,7 @@
     const t = nav.get().tab;
     const body = t === 'optimizador' ? renderOptim() : renderLeads();
     el('view-oficina-ia').innerHTML = `
-      <div class="rounded-xl border border-cc-g200 bg-white p-4 mb-5 flex items-start gap-3"><div class="w-10 h-10 rounded-lg bg-cc-amber/20 flex items-center justify-center text-cc-amber text-lg"><i class="fa-solid fa-wand-magic-sparkles"></i></div><div class="flex-1"><p class="text-sm font-bold text-cc-navy">Oficina Virtual IA</p><p class="text-xs text-cc-g600">Optimiza tus anuncios y gestiona tus leads con IA. <span class="text-cc-g400">Respuesta competitiva frente a Fincaraíz y Metrocuadrado.</span></p></div></div>
+      <div class="rounded-xl border border-cc-g200 bg-white p-4 mb-5 flex items-start gap-3"><div class="w-10 h-10 rounded-lg bg-cc-amber/20 flex items-center justify-center text-cc-amber text-lg"><i class="fa-solid fa-wand-magic-sparkles"></i></div><div class="flex-1"><p class="text-sm font-bold text-cc-navy">Oficina Virtual IA</p><p class="text-xs text-cc-g600">Optimiza tus anuncios y gestiona tus leads con IA.</p></div></div>
       <div class="border-b border-cc-g200 mb-5 flex gap-4 overflow-x-auto">${TABS.map(([id, label, ico]) => `<button data-ia="${id}" class="ia-tab whitespace-nowrap px-1 pb-3 text-sm font-semibold ${t === id ? 'active' : 'text-cc-g500 hover:text-cc-navy'}"><i class="fa-solid ${ico} mr-1"></i> ${label}</button>`).join('')}</div>
       <div>${body}</div>`;
     document.querySelectorAll('[data-ia]').forEach((b) => b.addEventListener('click', () => nav.set({ tab: b.getAttribute('data-ia') })));
