@@ -10,7 +10,7 @@
        cargarse desde otro origen. Usamos Montserrat como equivalente visual cercano. -->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
-    // Ciencuadras Design System tokens - segurosbolivar/ciencuadras-monorepo-mf
+    // Ciencuadras Design System tokens — segurosbolivar/ciencuadras-monorepo-mf
     tailwind.config = {
       theme: {
         extend: {
@@ -51,26 +51,26 @@
     @keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
     .ia-tab.active { color: #097AB2; border-bottom-color: #097AB2; }
     .ia-tab { border-bottom: 2px solid transparent; }
-    /* pestana lateral "Resuelve tus dudas" */
+    /* pestaña lateral "Resuelve tus dudas" */
     .dudas-tab { writing-mode: vertical-rl; }
   </style>
 </head>
 <body class="bg-white min-h-screen">
 
-  <!-- ===== HEADER GLOBAL (barra blanca con menu horizontal) ===== -->
+  <!-- ===== HEADER GLOBAL (barra blanca con menú horizontal) ===== -->
   <header class="cc-header bg-white sticky top-0 z-30">
     <div class="max-w-[1285px] mx-auto px-4 md:px-10 h-[60px] flex items-center gap-6">
-      <button id="menuBtn" class="lg:hidden text-cc-g700 p-1" aria-label="Abrir menu"><i class="fa-solid fa-bars text-xl"></i></button>
+      <button id="menuBtn" class="lg:hidden text-cc-g700 p-1" aria-label="Abrir menú"><i class="fa-solid fa-bars text-xl"></i></button>
       <!-- logo real Ciencuadras -->
       <a href="#" class="flex items-center select-none flex-shrink-0">
         <img src="https://www.ciencuadras.com/sources/images/logo-cc-color.svg" alt="Ciencuadras" width="144" height="29" class="h-[30px] w-auto" />
       </a>
-      <!-- menu horizontal -->
+      <!-- menú horizontal -->
       <nav class="hidden lg:flex items-center gap-7 flex-1 justify-center">
         <a class="top-link" href="#">Compra</a>
         <a class="top-link" href="#">Arriendo</a>
         <a class="top-link inline-flex items-center gap-1" href="#">Vender <i class="fa-solid fa-angle-down text-[11px]"></i></a>
-        <a class="top-link inline-flex items-center gap-1" href="#">Tramites y servicios <i class="fa-solid fa-angle-down text-[11px]"></i></a>
+        <a class="top-link inline-flex items-center gap-1" href="#">Trámites y servicios <i class="fa-solid fa-angle-down text-[11px]"></i></a>
         <a class="top-link" href="#">Exterior</a>
       </nav>
       <!-- acciones derecha -->
@@ -87,10 +87,10 @@
     <div class="max-w-[1285px] mx-auto px-4 md:px-10 py-4 flex items-center justify-between gap-4 flex-wrap">
       <h1 class="text-2xl font-light text-cc-g600">Mi zona privada</h1>
       <div class="flex items-center gap-2 flex-wrap">
-        <input class="text-sm bg-white border border-cc-g200 rounded-lg px-3 py-2 w-36 focus:outline-none focus:border-cc-primary placeholder:text-cc-g400" placeholder="Codigo">
+        <input class="text-sm bg-white border border-cc-g200 rounded-lg px-3 py-2 w-36 focus:outline-none focus:border-cc-primary placeholder:text-cc-g400" placeholder="Código">
         <div class="relative">
           <select class="text-sm bg-white border border-cc-g200 rounded-lg pl-3 pr-8 py-2 w-44 appearance-none focus:outline-none focus:border-cc-primary text-cc-g500">
-            <option>Tipo Transaccion</option><option>Arriendo</option><option>Venta</option>
+            <option>Tipo Transacción</option><option>Arriendo</option><option>Venta</option>
           </select>
           <i class="fa-solid fa-chevron-down text-[10px] text-cc-g400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
         </div>
@@ -110,6 +110,9 @@
         <button data-view="leads" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3">
           <span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-rectangle-list"></i></span> Mis leads
         </button>
+        <button data-view="reportes" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3">
+          <span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-solid fa-chart-column"></i></span> Reportes
+        </button>
         <button data-view="publicaciones" class="zp-menu-item active w-full text-left px-5 py-3 text-sm flex items-center gap-3">
           <span class="zp-menu-ico w-5 text-center"><i class="fa-solid fa-circle-check"></i></span> Publicaciones
         </button>
@@ -120,7 +123,7 @@
           <span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-solid fa-user"></i></span> Mis datos
         </button>
         <button data-view="facturacion" class="zp-menu-item w-full text-left px-5 py-3 text-sm flex items-center gap-3">
-          <span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-file-lines"></i></span> Datos Facturacion
+          <span class="zp-menu-ico w-5 text-center text-cc-g400"><i class="fa-regular fa-file-lines"></i></span> Datos Facturación
         </button>
 
         <div class="mx-5 my-3 border-t border-cc-g200"></div>
@@ -146,7 +149,7 @@
     </main>
   </div>
 
-  <!-- pestana lateral fija "Resuelve tus dudas" -->
+  <!-- pestaña lateral fija "Resuelve tus dudas" -->
   <button class="hidden lg:flex fixed right-0 top-1/2 -translate-y-1/2 z-20 bg-cc-blueSoft text-cc-primary text-xs font-semibold px-2 py-3 rounded-l-lg shadow items-center">
     <span class="dudas-tab">Resuelve tus dudas</span>
   </button>
@@ -154,6 +157,6 @@
   <!-- toast host -->
   <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
 
-  <script src="app-oficina-virtual.js?v=12"></script>
+  <script src="app-oficina-virtual.js?v=13"></script>
 </body>
 </html>
